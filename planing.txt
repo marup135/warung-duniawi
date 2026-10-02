@@ -93,6 +93,21 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Tab baru "Kelola Kategori" untuk tambah/hapus kategori warung
       * Search Bar & Filter Kategori di halaman Admin untuk pencarian cepat produk
 
+[x] SPRINT 8: POS KASIR TOKO (LOCAL) & SECURE AUTHENTICATION (SELESAI)
+    - Auth Security:
+      * Login `/admin` menggunakan pasangan Email & Password resmi pengelola (Email: `admin@warungduniawi.com` / Password: `admin123`)
+      * Session login tersimpan aman di browser pengelola (`localStorage session`)
+    - Peningkatan Upload/Kelola Foto Produk:
+      * Input URL foto & pilihan preset gambar bawaan warung (Sembako, Rokok, Es Krim, Roti, Minuman, dll)
+    - Modul Layar Kasir Toko POS (Ramah Bapak / Orang Tua - Simple & Tombol Besar):
+      * Tab utama "KASIR TOKO (POS)" dengan grid produk besar, harga jelas, & pencarian cepat
+      * Fitur Barcode Scanner USB / Input Barcode langsung otomatis masuk keranjang kasir
+      * Kalkulator Kasir Cepat: Total belanja otomatis, tombol preset uang pas (10rb, 20rb, 50rb, 100rb), & hitung kembalian otomatis
+      * Tombol "BAYAR & CETAK STRUK" 1-klik langsung cetak nota kasir (Uang Dibayar + Kembalian) ke printer thermal 58mm/80mm
+    - Single Database Synchronized:
+      * Transaksi kasir offline langsung tercatat di database SQLite yang sama dengan pesanan online
+      * Tag status pembeda pesanan web online vs transaksi kasir offline toko
+
 --------------------------------------------------------------------------------
 CATATAN TAMBAHAN & BACKLOG MASA DEPAN (Future Iteration)
 --------------------------------------------------------------------------------

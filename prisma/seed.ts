@@ -3,9 +3,9 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding initial Warung Duniawi catalog...');
+  console.log('Seeding initial Warung Duniawi catalog with Barcodes...');
 
-  // 1. Bersihkan data lama jika ada
+  // 1. Bersihkan data lama
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
   await prisma.product.deleteMany();
@@ -30,12 +30,13 @@ async function main() {
     createdCategories[cat.slug] = created.id;
   }
 
-  // 3. Produk-Produk Warung Nyata
+  // 3. Produk-Produk Warung Nyata dengan Kode Barcode
   const products = [
     // Sembako
     {
       name: 'Beras Ramos Premium 5 Kg',
       slug: 'beras-ramos-5kg',
+      barcode: '899100100001',
       description: 'Beras pulen pilihan keluarga, wangi alami dan bersih tanpa pemutih.',
       price: 72000,
       unit: 'sak (5kg)',
@@ -47,6 +48,7 @@ async function main() {
     {
       name: 'Minyak Goreng SunCo 2 Liter',
       slug: 'minyak-sunco-2l',
+      barcode: '899100100002',
       description: 'Minyak goreng bening kelapa sawit berkualitas, tidak cepat hitam.',
       price: 38000,
       unit: 'pouch (2L)',
@@ -58,6 +60,7 @@ async function main() {
     {
       name: 'Telur Ayam Negeri Segar 1 Kg',
       slug: 'telur-ayam-1kg',
+      barcode: '899100100003',
       description: 'Telur ayam segar langsung dari peternakan, isi sekitar 15-16 butir.',
       price: 28500,
       unit: 'kg',
@@ -69,6 +72,7 @@ async function main() {
     {
       name: 'Gula Pasir Gulaku Kuning 1 Kg',
       slug: 'gulaku-kuning-1kg',
+      barcode: '899100100004',
       description: 'Gula tebu murni dengan aroma karamel khas dan manis pas.',
       price: 18500,
       unit: 'kg',
@@ -80,6 +84,7 @@ async function main() {
     {
       name: 'Indomie Goreng Spesial',
       slug: 'indomie-goreng-spesial',
+      barcode: '089686043014',
       description: 'Mi instan goreng legendaris dengan bumbu gurih nikmat dan bawang goreng renyah.',
       price: 3500,
       unit: 'bungkus',
@@ -93,6 +98,7 @@ async function main() {
     {
       name: 'Sampoerna A Mild 16',
       slug: 'sampoerna-a-mild-16',
+      barcode: '899999900001',
       description: 'Rokok kretek filter rendah tar dan nikotin pilihan perokok dewasa.',
       price: 36000,
       unit: 'bungkus',
@@ -104,6 +110,7 @@ async function main() {
     {
       name: 'Gudang Garam Surya 16',
       slug: 'surya-16',
+      barcode: '899999900002',
       description: 'Rokok kretek filter dengan rasa mantap dan racikan tembakau khas Kediri.',
       price: 35000,
       unit: 'bungkus',
@@ -115,6 +122,7 @@ async function main() {
     {
       name: 'Djarum Super 12',
       slug: 'djarum-super-12',
+      barcode: '899999900003',
       description: 'Kretek rasa khas nusantara tembakau cengkeh pilihan.',
       price: 24000,
       unit: 'bungkus',
@@ -128,6 +136,7 @@ async function main() {
     {
       name: 'Aice Jagung Manis (Sweet Corn)',
       slug: 'aice-sweet-corn',
+      barcode: '899720000001',
       description: 'Es krim stik rasa jagung manis lezat dengan aroma khas dan cone renyah lembut.',
       price: 4000,
       unit: 'pcs',
@@ -139,6 +148,7 @@ async function main() {
     {
       name: 'Aice Mochi Durian',
       slug: 'aice-mochi-durian',
+      barcode: '899720000002',
       description: 'Kulit mochi kenyal dengan isian es krim rasa durian asli yang lumer di mulut.',
       price: 3500,
       unit: 'pcs',
@@ -150,6 +160,7 @@ async function main() {
     {
       name: 'Walls Cornetto Chocolate Disc',
       slug: 'walls-cornetto-disc',
+      barcode: '899720000003',
       description: 'Cone renyah berlapis cokelat tebal dengan topping keping coklat lezat.',
       price: 12000,
       unit: 'pcs',
@@ -163,6 +174,7 @@ async function main() {
     {
       name: 'Sari Roti Tawar Spesial 370g',
       slug: 'sari-roti-tawar-spesial',
+      barcode: '899888800001',
       description: 'Roti tawar lembut dan empuk tanpa kulit keras, pas untuk sarapan keluarga.',
       price: 16000,
       unit: 'bungkus',
@@ -174,6 +186,7 @@ async function main() {
     {
       name: 'Sari Roti Sandwich Coklat',
       slug: 'sari-roti-sandwich-coklat',
+      barcode: '899888800002',
       description: 'Roti lapis praktis siap santap dengan selai cokelat melimpah.',
       price: 6000,
       unit: 'pcs',
@@ -187,6 +200,7 @@ async function main() {
     {
       name: 'Le Minerale 600ml Dingin',
       slug: 'le-minerale-600ml',
+      barcode: '899600100001',
       description: 'Air mineral pegunungan segar dengan mineral alami dan manis khas.',
       price: 3500,
       unit: 'botol',
@@ -198,6 +212,7 @@ async function main() {
     {
       name: 'Teh Pucuk Harum 350ml Dingin',
       slug: 'teh-pucuk-350ml',
+      barcode: '899600100002',
       description: 'Minuman teh melati dari pucuk daun teh pilihan, disajikan segar dingin.',
       price: 4000,
       unit: 'botol',
@@ -211,6 +226,7 @@ async function main() {
     {
       name: 'Sunlight Jeruk Nipis 700ml',
       slug: 'sunlight-700ml',
+      barcode: '899500100001',
       description: 'Sabun cuci piring konsentrat ekstrak jeruk nipis asli, bersihkan lemak membandel.',
       price: 15500,
       unit: 'pouch',
@@ -227,7 +243,7 @@ async function main() {
     });
   }
 
-  console.log(`Berhasil melakukan seed ${categories.length} kategori dan ${products.length} produk!`);
+  console.log(`Berhasil melakukan seed ${categories.length} kategori dan ${products.length} produk berkategori & barcode!`);
 }
 
 main()

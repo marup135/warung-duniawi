@@ -21,6 +21,9 @@ interface Order {
   pickupMethod: string;
   paymentMethod: string;
   totalAmount: number;
+  amountPaid?: number | null;
+  changeAmount?: number | null;
+  orderSource?: string | null;
   notes?: string | null;
   items: OrderItem[];
   createdAt: string;
@@ -49,6 +52,8 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
     minute: '2-digit',
   });
 
+  const isPosOffline = order.orderSource === 'POS_KASIR' || order.pickupMethod === 'POS_OFFLINE';
+
   return (
     <div id="printable-receipt" className="hidden print:block text-black font-mono text-[11px] leading-tight">
       {/* Header Struk */}
@@ -66,8 +71,10 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
           <span>{formattedDate}</span>
         </div>
         <div>PELANGGAN : {order.customerName.toUpperCase()}</div>
-        <div>NO WA     : {order.customerPhone}</div>
-        <div>METODE    : AMBIL DI WARUNG</div>
+        {order.customerPhone && order.customerPhone !== '-' && (
+          <div>NO WA     : {order.customerPhone}</div>
+        )}
+        <div>TIPE      : {isPosOffline ? 'TRANSAKSI KASIR TOKO' : 'AMBIL DI WARUNG'}</div>
       </div>
 
       {/* List Items */}
@@ -85,16 +92,30 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
         ))}
       </div>
 
-      {/* Ringkasan Bayar */}
+      {/* Ringkasan Bayar & Kembalian */}
       <div className="space-y-1 text-[10.5px]">
         <div className="flex justify-between font-extrabold text-xs">
-          <span>TOTAL :</span>
+          <span>TOTAL  :</span>
           <span>{formatRupiah(order.totalAmount)}</span>
         </div>
-        <div className="flex justify-between text-[10px]">
-          <span>BAYAR DI KASIR:</span>
-          <span>QRIS / TUNAI</span>
-        </div>
+
+        {isPosOffline && order.amountPaid ? (
+          <>
+            <div className="flex justify-between text-[10px]">
+              <span>BAYAR  :</span>
+              <span>{formatRupiah(order.amountPaid)}</span>
+            </div>
+            <div className="flex justify-between text-[10px] font-bold">
+              <span>KEMBALI:</span>
+              <span>{formatRupiah(order.changeAmount || 0)}</span>
+            </div>
+          </>
+        ) : (
+          <div className="flex justify-between text-[10px]">
+            <span>BAYAR DI KASIR:</span>
+            <span>QRIS / TUNAI</span>
+          </div>
+        )}
       </div>
 
       {order.notes && (

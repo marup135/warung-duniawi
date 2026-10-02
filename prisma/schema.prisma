@@ -21,6 +21,7 @@ model Product {
   id          String      @id @default(cuid())
   name        String
   slug        String      @unique
+  barcode     String?     @unique // Kode Barcode (misal: 8999999123456)
   description String?
   price       Int         // Harga dalam Rupiah (integer)
   unit        String      @default("pcs") // misal: "kg", "pcs", "bungkus", "renceng", "btg"
@@ -39,11 +40,14 @@ model Order {
   orderNumber     String      @unique // e.g., WD-261002-001
   customerName    String
   customerPhone   String
-  pickupMethod    String      @default("PICKUP") // "PICKUP" atau "DELIVERY"
+  pickupMethod    String      @default("PICKUP") // "PICKUP" atau "POS_OFFLINE"
   deliveryAddress String?
   paymentMethod   String      @default("CASH_OR_QRIS_ON_SITE")
   status          String      @default("PENDING") // PENDING, PROCESSING, READY, COMPLETED, CANCELLED
   totalAmount     Int
+  amountPaid      Int?        @default(0) // Uang dibayar saat transaksi kasir
+  changeAmount    Int?        @default(0) // Uang kembalian kasir
+  orderSource     String      @default("ONLINE_WEB") // "ONLINE_WEB" atau "POS_KASIR"
   notes           String?
   items           OrderItem[]
   createdAt       DateTime    @default(now())

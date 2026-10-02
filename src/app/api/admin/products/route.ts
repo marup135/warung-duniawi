@@ -1,11 +1,11 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
 
-// POST: Tambah produk baru oleh admin
+// POST: Tambah produk baru oleh admin (dengan barcode)
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, categoryId, price, unit, description, imageUrl, inStock, isFeatured } = body;
+    const { name, categoryId, price, unit, barcode, description, imageUrl, inStock, isFeatured } = body;
 
     if (!name || !categoryId || price === undefined) {
       return NextResponse.json(
@@ -22,6 +22,7 @@ export async function POST(request: Request) {
       data: {
         name: name.trim(),
         slug,
+        barcode: barcode ? barcode.trim() : null,
         categoryId,
         price: Number(price),
         unit: unit ? unit.trim() : 'pcs',
@@ -40,17 +41,17 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error creating product:', error);
     return NextResponse.json(
-      { success: false, message: 'Gagal menambah produk' },
+      { success: false, message: 'Gagal menambah produk. Pastikan Barcode belum pernah dipakai.' },
       { status: 500 }
     );
   }
 }
 
-// PUT / PATCH: Full Edit atau Quick Edit Produk
+// PUT / PATCH: Full Edit atau Quick Edit Produk (dengan barcode)
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { productId, name, categoryId, price, unit, description, imageUrl, inStock, isFeatured } = body;
+    const { productId, name, categoryId, price, unit, barcode, description, imageUrl, inStock, isFeatured } = body;
 
     if (!productId) {
       return NextResponse.json(
@@ -64,6 +65,7 @@ export async function PUT(request: Request) {
     if (categoryId !== undefined) dataToUpdate.categoryId = categoryId;
     if (price !== undefined) dataToUpdate.price = Number(price);
     if (unit !== undefined) dataToUpdate.unit = unit.trim();
+    if (barcode !== undefined) dataToUpdate.barcode = barcode ? barcode.trim() : null;
     if (description !== undefined) dataToUpdate.description = description ? description.trim() : null;
     if (imageUrl !== undefined) dataToUpdate.imageUrl = imageUrl ? imageUrl.trim() : null;
     if (inStock !== undefined) dataToUpdate.inStock = Boolean(inStock);
