@@ -127,7 +127,7 @@ export default function CatalogView() {
               Belanja Sembako Tanpa Antre di Warung Duniawi!
             </h2>
             <p className="mt-2 text-stone-100 text-sm sm:text-base leading-relaxed font-medium">
-              Pilih beras, rokok, es krim, roti, dan minuman langsung dari HP Anda. Ambil pesanan tanpa perlu nunggu lama di kasir.
+              Pilih minyak, telur, rokok, es krim, roti, dan minuman langsung dari HP Anda. Ambil pesanan tanpa perlu nunggu lama di kasir.
             </p>
           </div>
         </div>
@@ -176,7 +176,7 @@ export default function CatalogView() {
               Produk Tidak Ditemukan
             </h3>
             <p className="text-stone-500 text-sm mt-1 max-w-md mx-auto">
-              Coba cari dengan kata kunci lain seperti &quot;beras&quot;, &quot;rokok&quot;, &quot;es krim&quot;, atau klik tombol &quot;Semua Produk&quot;.
+              Coba cari dengan kata kunci lain seperti &quot;minyak&quot;, &quot;rokok&quot;, &quot;es krim&quot;, atau klik tombol &quot;Semua Produk&quot;.
             </p>
             <button
               onClick={() => {

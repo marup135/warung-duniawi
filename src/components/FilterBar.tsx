@@ -36,7 +36,7 @@ export default function FilterBar({
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Cari beras, rokok, es krim, roti, atau minyak..."
+          placeholder="Cari minyak, telur, rokok, es krim, roti, atau minuman..."
           className="w-full pl-11 pr-10 py-3 bg-white border border-stone-300 rounded-2xl text-stone-900 placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 shadow-xs text-sm sm:text-base transition-all"
         />
         {searchQuery && (

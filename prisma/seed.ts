@@ -32,7 +32,7 @@ async function main() {
 
   // 3. Produk-Produk Warung Nyata dengan Kode Barcode
   const products = [
-    // Sembako (Tanpa Beras)
+    // Sembako & Dapur Utama
     {
       name: 'Minyak Goreng SunCo 2 Liter',
       slug: 'minyak-sunco-2l',
