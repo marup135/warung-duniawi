@@ -82,6 +82,17 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
     - Dockerfile & docker-compose.yml dikonfigurasi presisi di Port 3001 (aman tidak bentrok dengan Talysa)
     - Panduan deployment lengkap dan setup DNS Northwest ditulis di `DEPLOYMENT_GUIDE.md`
 
+[x] SPRINT 7: SUPERADMIN FULL PRODUCT & CATEGORY MANAGEMENT (CRUD) (SELESAI)
+    - Backend API:
+      * Endpoint DELETE `/api/admin/products` (Hapus produk secara permanen dari database)
+      * Endpoint PUT/PATCH `/api/admin/products` (Full edit: nama, deskripsi, harga, unit, gambar, kategori)
+      * Endpoint CRUD `/api/admin/categories` (Tambah, edit, dan hapus kategori warung)
+    - Frontend Admin Dashboard (`/admin`):
+      * Tombol & Modal "Full Edit Produk" (edit nama, foto, kategori, unit, harga, deskripsi)
+      * Tombol "Hapus Produk" dengan dialog konfirmasi aman (mencegah kesalahan hapus)
+      * Tab baru "Kelola Kategori" untuk tambah/hapus kategori warung
+      * Search Bar & Filter Kategori di halaman Admin untuk pencarian cepat produk
+
 --------------------------------------------------------------------------------
 CATATAN TAMBAHAN & BACKLOG MASA DEPAN (Future Iteration)
 --------------------------------------------------------------------------------

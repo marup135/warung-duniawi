@@ -46,11 +46,11 @@ export async function POST(request: Request) {
   }
 }
 
-// PATCH: Quick edit stok atau harga produk
-export async function PATCH(request: Request) {
+// PUT / PATCH: Full Edit atau Quick Edit Produk
+export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { productId, inStock, price } = body;
+    const { productId, name, categoryId, price, unit, description, imageUrl, inStock, isFeatured } = body;
 
     if (!productId) {
       return NextResponse.json(
@@ -60,8 +60,14 @@ export async function PATCH(request: Request) {
     }
 
     const dataToUpdate: any = {};
-    if (inStock !== undefined) dataToUpdate.inStock = Boolean(inStock);
+    if (name !== undefined) dataToUpdate.name = name.trim();
+    if (categoryId !== undefined) dataToUpdate.categoryId = categoryId;
     if (price !== undefined) dataToUpdate.price = Number(price);
+    if (unit !== undefined) dataToUpdate.unit = unit.trim();
+    if (description !== undefined) dataToUpdate.description = description ? description.trim() : null;
+    if (imageUrl !== undefined) dataToUpdate.imageUrl = imageUrl ? imageUrl.trim() : null;
+    if (inStock !== undefined) dataToUpdate.inStock = Boolean(inStock);
+    if (isFeatured !== undefined) dataToUpdate.isFeatured = Boolean(isFeatured);
 
     const updatedProduct = await prisma.product.update({
       where: { id: productId },
@@ -77,6 +83,40 @@ export async function PATCH(request: Request) {
     console.error('Error updating product:', error);
     return NextResponse.json(
       { success: false, message: 'Gagal memperbarui produk' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  return PUT(request);
+}
+
+// DELETE: Hapus produk dari database
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const productId = searchParams.get('id');
+
+    if (!productId) {
+      return NextResponse.json(
+        { success: false, message: 'ID produk wajib diberikan' },
+        { status: 400 }
+      );
+    }
+
+    await prisma.product.delete({
+      where: { id: productId },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Produk berhasil dihapus!',
+    });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    return NextResponse.json(
+      { success: false, message: 'Gagal menghapus produk' },
       { status: 500 }
     );
   }
