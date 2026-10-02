@@ -33,8 +33,8 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 ENV DATABASE_URL="file:/app/data/prod.db"
 
-# Buat folder data persisten untuk SQLite
-RUN mkdir -p /app/data && chown -R node:nodejs /app/data
+# Buat folder data persisten untuk SQLite (User node:node di Alpine)
+RUN mkdir -p /app/data && chown -R node:node /app/data
 
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
