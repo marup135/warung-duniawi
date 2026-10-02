@@ -32,19 +32,7 @@ async function main() {
 
   // 3. Produk-Produk Warung Nyata dengan Kode Barcode
   const products = [
-    // Sembako
-    {
-      name: 'Beras Ramos Premium 5 Kg',
-      slug: 'beras-ramos-5kg',
-      barcode: '899100100001',
-      description: 'Beras pulen pilihan keluarga, wangi alami dan bersih tanpa pemutih.',
-      price: 72000,
-      unit: 'sak (5kg)',
-      imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=500&q=80',
-      categoryId: createdCategories['sembako'],
-      isFeatured: true,
-      inStock: true,
-    },
+    // Sembako (Tanpa Beras)
     {
       name: 'Minyak Goreng SunCo 2 Liter',
       slug: 'minyak-sunco-2l',

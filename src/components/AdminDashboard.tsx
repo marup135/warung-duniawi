@@ -605,7 +605,7 @@ export default function AdminDashboard() {
 
   // Preset Gambar Bawaan Warung Sederhana
   const sampleImagePresets = [
-    { label: '🌾 Sembako / Beras', url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=500&q=80' },
+    { label: '🌶️ Bumbu Dapur', url: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=500&q=80' },
     { label: '🌻 Minyak Goreng', url: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=500&q=80' },
     { label: '🥚 Telur Ayam', url: 'https://images.unsplash.com/photo-1506976785307-8732e854ad03?auto=format&fit=crop&w=500&q=80' },
     { label: '🍜 Indomie / Mie', url: 'https://images.unsplash.com/photo-1612927601601-6638404737ce?auto=format&fit=crop&w=500&q=80' },
