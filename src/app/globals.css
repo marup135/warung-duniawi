@@ -1,26 +1,43 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Nuansa Cerah, Hangat, Ramah UMKM Indonesia (Warm Cream & Spices) */
+  --bg-main: #FAF8F5; /* Krem gading hangat yang bersih */
+  --bg-card: #FFFFFF;
+  --text-main: #1C1917; /* Stone 900 */
+  --text-muted: #57534E; /* Stone 600 */
+  --brand-primary: #EA580C; /* Kunyit oranye hangat / spice orange */
+  --brand-primary-hover: #C2410C;
+  --brand-secondary: #15803D; /* Hijau daun segar / fresh harvest */
+  --brand-amber: #D97706; /* Emas madu / warm yellow */
+  --border-subtle: #E7E5E4; /* Stone 200 */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Kita pastikan tema TETAP CERAH walaupun sistem user dark mode */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Gaya cetak thermal printer 58mm / 80mm */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt, #printable-receipt * {
+    visibility: visible;
+  }
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 58mm; /* Standar thermal mini */
+    margin: 0;
+    padding: 4px;
+    font-size: 11px;
+    line-height: 1.2;
+    color: #000;
+  }
 }

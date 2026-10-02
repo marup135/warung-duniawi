@@ -1,0 +1,95 @@
+# ==============================================================================
+# WARUNG DUNIAWI - AGILE PROJECT ROADMAP & BACKLOG (planing.txt)
+# Metode: Agile / Scrum (Sprints & Iterative Releases)
+# Brand: Warung Duniawi (Sembako & Kebutuhan Harian)
+# Target Server: Home Server Ubuntu + Docker (bersama Talysa)
+# Domain: warungduniawi.com
+# Tema Desain: Cerah, Hangat, Segar, Anti-AI-Slop (Organik & Ramah HP)
+# ==============================================================================
+
+[STATUS PROJECT: PLANNING PHASE - MENUNGGU PERSETUJUAN USER]
+
+--------------------------------------------------------------------------------
+PRODUCT GOAL (Tujuan Utama)
+--------------------------------------------------------------------------------
+Membangun web app pemesanan mandiri (self-order) dan sistem kasir/admin untuk 
+Warung Sembako Duniawi dengan alur:
+1. Pembeli memilih barang (sembako, rokok, es krim, roti, dll) dari katalog cerah.
+2. Checkout tanpa ribet daftar akun (Guest checkout: Nama & WhatsApp).
+3. Pilihan pengambilan: "Ambil di Warung" (aktif) & "Diantar" (Coming Soon).
+4. Pembayaran di kasir (keterangan: QRIS, Tunai, Transfer).
+5. Notifikasi real-time bunyi ke layar pemilik warung saat ada pesanan baru.
+6. Fitur cetak struk otomatis/manual ke thermal printer kasir (58mm/80mm).
+
+--------------------------------------------------------------------------------
+TEKNOLOGI STACK (Tech Stack)
+--------------------------------------------------------------------------------
+- Framework: Next.js (App Router, TypeScript)
+- Styling: Tailwind CSS + Google Fonts kustom (warm, modern, cerah)
+- Database: SQLite / PostgreSQL via Prisma ORM (sangat ringan di Docker)
+- Real-time Alert: Server-Sent Events (SSE) / Polling ringan dengan Audio Chime
+- Thermal Printing: CSS Media Print 58mm/80mm + ESC-POS Web Print ready
+- Container: Docker & Docker Compose (siap tandem di home server)
+
+--------------------------------------------------------------------------------
+SPRINT BREAKDOWN (Rencana Kerja Bertahap)
+--------------------------------------------------------------------------------
+
+[x] SPRINT 1: FOUNDATION & PROJECT SETUP (SELESAI)
+    - Inisialisasi Next.js (App Router, TypeScript, Tailwind CSS)
+    - Konfigurasi tema warna cerah (Warm Ivory, Spice Orange, Fresh Leaf Green)
+    - Setup Database Schema (Prisma): Model Produk, Kategori, Order, OrderItem
+    - Seed data awal: Sembako (beras, telur, minyak), Rokok, Es Krim, Roti, Minuman (16 item siap)
+    - Setup Dockerfile & docker-compose.yml untuk home server (Port 3001)
+
+[ ] SPRINT 2: CUSTOMER STOREFRONT & CATALOG (ANTI-AI-SLOP DESIGN)
+    - Header toko cerah dengan identitas "Warung Duniawi" & jam operasional
+    - Quick Category Filter (Semua, Sembako, Rokok, Es Krim, Roti/Snack, Minuman)
+    - Instant Search Bar (pencarian nama produk real-time)
+    - Kartu Produk: Foto jelas, nama, harga (Rp), badge stok (Tersedia / Habis)
+    - Tombol tambah ke keranjang dengan kontrol kuantitas (+ / -) yang responsif
+
+[ ] SPRINT 3: KERANJANG & AUTOMATIC CHECKOUT SYSTEM
+    - Floating Cart Drawer / Bottom Sheet (sangat ramah smartphone)
+    - Form Checkout Sederhana (Tanpa Login):
+      * Input Nama Pembeli
+      * Input Nomor WhatsApp
+      * Opsi Pengambilan: [x] Ambil di Warung | [ ] Diantar (Badge: Coming Soon)
+      * Metode Bayar: "Bayar di Kasir (QRIS, Tunai, Transfer)"
+    - Action Submit Order -> Simpan ke Database dengan Kode Order unik (cth: #WD-001)
+    - Halaman / Modal Sukses Nota Digital: Menampilkan nomor antrean & ringkasan
+
+[ ] SPRINT 4: REAL-TIME ADMIN / KASIR DASHBOARD
+    - Login sederhana Admin/Kasir untuk kakak pemilik warung
+    - Live Order Monitor:
+      * Notifikasi audio instan saat ada pesanan baru masuk ("Ting!")
+      * Badge pesanan baru yang belum diproses
+    - Manajemen Status Pesanan: [Menunggu] -> [Diproses/Disiapkan] -> [Selesai]
+    - Manajemen Produk Cepat:
+      * Toggle stok habis/tersedia dengan satu klik saklar
+      * Edit harga cepat (fluktuasi sembako)
+      * Tambah produk baru
+
+[ ] SPRINT 5: INTEGRASI CETAK RESI THERMAL PRINTER (58mm / 80mm)
+    - Template Struk Kasir Khusus Cetak (@media print)
+      * Logo / Nama: Warung Duniawi
+      * No. Order & Tanggal
+      * Nama Pelanggan & Metode (Ambil di Warung)
+      * Daftar Item, Kuantitas, Subtotal & Total
+      * Info Pembayaran di Kasir (QRIS / Tunai)
+    - Tombol "Cetak Struk" instan di dashboard admin (kompatibel printer Bluetooth/USB)
+    - Opsi auto-print saat pesanan dikonfirmasi
+
+[ ] SPRINT 6: TESTING, DOCKER DEPLOYMENT & PRODUCTION READINESS
+    - Pengujian alur belanja dari HP (responsive mobile test)
+    - Pengujian alur penerimaan pesanan dan print struk kasir
+    - Build production docker container
+    - Panduan konfigurasi DNS domain `warungduniawi.com` ke Nginx reverse proxy home server
+
+--------------------------------------------------------------------------------
+CATATAN TAMBAHAN & BACKLOG MASA DEPAN (Future Iteration)
+--------------------------------------------------------------------------------
+- [Future] Fitur Pengantaran ke Rumah (radius & ongkir lokal).
+- [Future] Integrasi Payment Gateway QRIS Dinamis otomatis.
+- [Future] Laporan penjualan harian & rekap keuntungan.
+==============================================================================

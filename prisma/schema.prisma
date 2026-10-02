@@ -1,0 +1,62 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  icon      String?   // Lucide icon name or emoji
+  sortOrder Int       @default(0)
+  products  Product[]
+  createdAt DateTime  @default(now())
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  description String?
+  price       Int         // Harga dalam Rupiah (integer)
+  unit        String      @default("pcs") // misal: "kg", "pcs", "bungkus", "renceng", "btg"
+  imageUrl    String?
+  inStock     Boolean     @default(true)
+  isFeatured  Boolean     @default(false)
+  categoryId  String
+  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique // e.g., WD-261002-001
+  customerName    String
+  customerPhone   String
+  pickupMethod    String      @default("PICKUP") // "PICKUP" atau "DELIVERY"
+  deliveryAddress String?
+  paymentMethod   String      @default("CASH_OR_QRIS_ON_SITE")
+  status          String      @default("PENDING") // PENDING, PROCESSING, READY, COMPLETED, CANCELLED
+  totalAmount     Int
+  notes           String?
+  items           OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Int      // Harga satuan saat dibeli
+  subtotal  Int
+}

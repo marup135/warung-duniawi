@@ -1,0 +1,18 @@
+services:
+  warungduniawi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: warungduniawi-web
+    restart: unless-stopped
+    ports:
+      - "3001:3000" # Expose ke port 3001 host agar tidak tabrakan dengan port 3000 Talysa
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/data/prod.db
+    volumes:
+      - warungduniawi-data:/app/data
+
+volumes:
+  warungduniawi-data:
+    name: warungduniawi_sqlite_data
