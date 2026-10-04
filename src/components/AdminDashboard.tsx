@@ -328,62 +328,6 @@ export default function AdminDashboard() {
     });
   };
 
-  // Handler Scan Barcode (Auto-Scan) & Smart Payment Input
-  const handleBarcodeSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const cleaned = barcodeInput.trim();
-    if (!cleaned) return;
-
-    // 1. Cek apakah ada produk dengan Barcode tersebut
-    const matchedProduct = products.find(
-      (p) => p.barcode && p.barcode.trim() === cleaned
-    );
-
-    if (matchedProduct) {
-      handleAddPosCart(matchedProduct);
-      setBarcodeInput('');
-      setTimeout(() => {
-        barcodeRef.current?.focus();
-      }, 50);
-      return;
-    }
-
-    // 2. Jika bukan barcode produk, cek apakah input berupa Angka Nominal Uang Pembeli
-    const isNumeric = /^\d+$/.test(cleaned);
-    if (isNumeric) {
-      const numericVal = Number(cleaned);
-      if (posCart.length === 0) {
-        alert('Keranjang belanjaan masih kosong! Scan barang terlebih dahulu.');
-        setBarcodeInput('');
-        setTimeout(() => {
-          barcodeRef.current?.focus();
-        }, 50);
-        return;
-      }
-
-      setCashGivenInput(cleaned);
-      setBarcodeInput('');
-
-      if (numericVal >= posTotalAmount) {
-        // Langsung selesaikan transaksi kasir & cetak struk
-        handleCheckoutPos(undefined, numericVal);
-      } else {
-        alert(`Uang yang dimasukkan (${formatRupiah(numericVal)}) kurang dari total belanja (${formatRupiah(posTotalAmount)}).`);
-        setTimeout(() => {
-          barcodeRef.current?.focus();
-        }, 50);
-      }
-      return;
-    }
-
-    // 3. Jika bukan barcode dan bukan angka nominal
-    alert(`Produk dengan Barcode "${cleaned}" tidak ditemukan!`);
-    setBarcodeInput('');
-    setTimeout(() => {
-      barcodeRef.current?.focus();
-    }, 50);
-  };
-
   // Total Belanja Kasir
   const posTotalAmount = posCart.reduce(
     (acc, item) => acc + item.product.price * item.quantity,
