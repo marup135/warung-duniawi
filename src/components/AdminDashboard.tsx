@@ -133,21 +133,11 @@ export default function AdminDashboard() {
 
   // --- KASIR POS TOKO STATE (Untuk Bapak/Kasir) ---
   const [posCart, setPosCart] = useState<PosCartItem[]>([]);
-  const [barcodeInput, setBarcodeInput] = useState('');
   const [posSearchQuery, setPosSearchQuery] = useState('');
   const [posSelectedCategory, setPosSelectedCategory] = useState('all');
   const [cashGivenInput, setCashGivenInput] = useState<string>('');
   const [submittingPos, setSubmittingPos] = useState(false);
-  const barcodeRef = useRef<HTMLInputElement>(null);
-
-  // Auto Focus Barcode Input ketika Kasir dibuka
-  useEffect(() => {
-    if (isAuthenticated && activeTab === 'pos') {
-      setTimeout(() => {
-        barcodeRef.current?.focus();
-      }, 200);
-    }
-  }, [isAuthenticated, activeTab]);
+  const [isManualSearchOpen, setIsManualSearchOpen] = useState(false);
 
   // Cek Auth Session Lokal
   useEffect(() => {
@@ -179,6 +169,28 @@ export default function AdminDashboard() {
   const handleLogout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('wd_admin_auth');
+  };
+
+  // Suara Beep Ramah Kasir Minimarket untuk Scan Barcode (Pitch Tinggi)
+  const playScanBeep = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1800, audioCtx.currentTime); // Pitch tinggi ala scanner toko
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.12);
+    } catch (e) {
+      console.log('Audio beep error:', e);
+    }
   };
 
   // Suara Chime Audio "Ting!"
@@ -291,6 +303,7 @@ export default function AdminDashboard() {
 
   // --- POS KASIR HANDLERS ---
   const handleAddPosCart = (product: Product) => {
+    playScanBeep();
     setPosCart((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
@@ -315,22 +328,60 @@ export default function AdminDashboard() {
     });
   };
 
-  // Handler Scan Barcode
-  const handleBarcodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!barcodeInput.trim()) return;
+  // Handler Scan Barcode (Auto-Scan) & Smart Payment Input
+  const handleBarcodeSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleaned = barcodeInput.trim();
+    if (!cleaned) return;
 
+    // 1. Cek apakah ada produk dengan Barcode tersebut
     const matchedProduct = products.find(
-      (p) => p.barcode && p.barcode.trim() === barcodeInput.trim()
+      (p) => p.barcode && p.barcode.trim() === cleaned
     );
 
     if (matchedProduct) {
       handleAddPosCart(matchedProduct);
       setBarcodeInput('');
-    } else {
-      alert(`Produk dengan Barcode "${barcodeInput}" tidak ditemukan!`);
-      setBarcodeInput('');
+      setTimeout(() => {
+        barcodeRef.current?.focus();
+      }, 50);
+      return;
     }
+
+    // 2. Jika bukan barcode produk, cek apakah input berupa Angka Nominal Uang Pembeli
+    const isNumeric = /^\d+$/.test(cleaned);
+    if (isNumeric) {
+      const numericVal = Number(cleaned);
+      if (posCart.length === 0) {
+        alert('Keranjang belanjaan masih kosong! Scan barang terlebih dahulu.');
+        setBarcodeInput('');
+        setTimeout(() => {
+          barcodeRef.current?.focus();
+        }, 50);
+        return;
+      }
+
+      setCashGivenInput(cleaned);
+      setBarcodeInput('');
+
+      if (numericVal >= posTotalAmount) {
+        // Langsung selesaikan transaksi kasir & cetak struk
+        handleCheckoutPos(undefined, numericVal);
+      } else {
+        alert(`Uang yang dimasukkan (${formatRupiah(numericVal)}) kurang dari total belanja (${formatRupiah(posTotalAmount)}).`);
+        setTimeout(() => {
+          barcodeRef.current?.focus();
+        }, 50);
+      }
+      return;
+    }
+
+    // 3. Jika bukan barcode dan bukan angka nominal
+    alert(`Produk dengan Barcode "${cleaned}" tidak ditemukan!`);
+    setBarcodeInput('');
+    setTimeout(() => {
+      barcodeRef.current?.focus();
+    }, 50);
   };
 
   // Total Belanja Kasir
@@ -343,15 +394,18 @@ export default function AdminDashboard() {
   const changeAmount = cashGivenNumber >= posTotalAmount ? cashGivenNumber - posTotalAmount : 0;
 
   // Submit Transaksi Kasir Toko
-  const handleCheckoutPos = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCheckoutPos = async (e?: React.FormEvent, customCashPaid?: number) => {
+    if (e) e.preventDefault();
     if (posCart.length === 0) {
       alert('Keranjang kasir masih kosong!');
       return;
     }
 
-    if (cashGivenNumber < posTotalAmount) {
-      alert('Uang yang diterima kasir kurang dari total belanja!');
+    const cashPaid = customCashPaid !== undefined ? customCashPaid : cashGivenNumber;
+    const computedChange = cashPaid >= posTotalAmount ? cashPaid - posTotalAmount : 0;
+
+    if (cashPaid < posTotalAmount) {
+      alert(`Uang yang diterima (${formatRupiah(cashPaid)}) kurang dari total belanja (${formatRupiah(posTotalAmount)})!`);
       return;
     }
 
@@ -362,8 +416,8 @@ export default function AdminDashboard() {
           productId: item.product.id,
           quantity: item.quantity,
         })),
-        amountPaid: cashGivenNumber,
-        changeAmount,
+        amountPaid: cashPaid,
+        changeAmount: computedChange,
         notes: 'Transaksi Kasir Toko (Offline)',
       };
 
@@ -378,6 +432,7 @@ export default function AdminDashboard() {
         const newOrder: Order = json.data;
         setPosCart([]);
         setCashGivenInput('');
+        scanBufferRef.current = '';
         fetchOrders();
         // Langsung cetak struk kasir
         handlePrintReceipt(newOrder);
@@ -390,6 +445,129 @@ export default function AdminDashboard() {
       setSubmittingPos(false);
     }
   };
+
+  // Buffer untuk menangkap scan barcode & input angka keyboard global
+  const scanBufferRef = useRef('');
+
+  // GLOBAL KEYBOARD SHORTCUT UNTUK KASIR ZERO-MOUSE & AUTO-SCANNER
+  useEffect(() => {
+    if (!isAuthenticated || activeTab !== 'pos') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isOtherInputFocused =
+        activeEl?.tagName === 'INPUT' ||
+        activeEl?.tagName === 'TEXTAREA' ||
+        activeEl?.tagName === 'SELECT';
+
+      // Jika sedang fokus di input modal pencarian manual F2 atau modal edit, abaikan
+      if (isOtherInputFocused && activeEl?.id !== 'pos-cash-input') {
+        return;
+      }
+
+      // 0. TOMBOL F2 -> BUKA / TUTUP MODAL PENCARIAN BARANG MANUAL
+      if (e.key === 'F2') {
+        e.preventDefault();
+        setIsManualSearchOpen((prev) => !prev);
+        return;
+      }
+
+      // 1. INPUT ANGKA (0-9 / Numpad)
+      if (e.key >= '0' && e.key <= '9') {
+        if (activeEl?.id !== 'pos-cash-input') {
+          e.preventDefault();
+          scanBufferRef.current += e.key;
+          setCashGivenInput(scanBufferRef.current);
+        } else {
+          scanBufferRef.current += e.key;
+        }
+        return;
+      }
+
+      // 2. TOMBOL BACKSPACE -> HAPUS ANGKA TERAKHIR
+      if (e.key === 'Backspace') {
+        if (activeEl?.id !== 'pos-cash-input') {
+          e.preventDefault();
+          scanBufferRef.current = scanBufferRef.current.slice(0, -1);
+          setCashGivenInput(scanBufferRef.current);
+        } else {
+          scanBufferRef.current = scanBufferRef.current.slice(0, -1);
+        }
+        return;
+      }
+
+      // 3. TOMBOL 'c' / 'C' / 'Escape' -> RESET INPUT UANG
+      if (e.key === 'c' || e.key === 'C' || e.key === 'Escape') {
+        e.preventDefault();
+        scanBufferRef.current = '';
+        setCashGivenInput('');
+        return;
+      }
+
+      // 4. TOMBOL SPASI (Space) -> SET UANG PAS
+      if (e.code === 'Space') {
+        if (activeEl?.id !== 'pos-cash-input') {
+          e.preventDefault();
+        }
+        if (posTotalAmount > 0) {
+          scanBufferRef.current = String(posTotalAmount);
+          setCashGivenInput(String(posTotalAmount));
+        }
+        return;
+      }
+
+      // 5. TOMBOL ENTER -> PROCESS SCAN OR CHECKOUT
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const inputString = (scanBufferRef.current || cashGivenInput || '').trim();
+
+        if (!inputString && posCart.length > 0 && cashGivenNumber >= posTotalAmount) {
+          handleCheckoutPos();
+          scanBufferRef.current = '';
+          return;
+        }
+
+        if (!inputString) return;
+
+        // Cek 1: Apakah input matches Barcode Produk?
+        const matchedProduct = products.find(
+          (p) => p.barcode && p.barcode.trim() === inputString
+        );
+
+        if (matchedProduct) {
+          // Berhasil scan barang! Tambah ke keranjang & reset input uang
+          handleAddPosCart(matchedProduct);
+          scanBufferRef.current = '';
+          setCashGivenInput('');
+          return;
+        }
+
+        // Cek 2: Jika panjang string >= 7 (Barcode EAN-8/13 yang tidak terdaftar di DB)
+        if (inputString.length >= 7) {
+          alert(`Produk dengan Barcode "${inputString}" tidak ditemukan!`);
+          scanBufferRef.current = '';
+          setCashGivenInput('');
+          return;
+        }
+
+        // Cek 3: Input berupa nominal uang pembeli (misal 10000, 20000, 50000)
+        const cashVal = Number(inputString) || cashGivenNumber;
+        if (posCart.length > 0 && cashVal >= posTotalAmount) {
+          handleCheckoutPos(undefined, cashVal);
+          scanBufferRef.current = '';
+        } else if (posCart.length === 0) {
+          alert('Keranjang belanjaan masih kosong!');
+          scanBufferRef.current = '';
+          setCashGivenInput('');
+        } else if (cashVal < posTotalAmount) {
+          alert(`Uang yang diterima (${formatRupiah(cashVal)}) kurang dari total belanja (${formatRupiah(posTotalAmount)})!`);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isAuthenticated, activeTab, posTotalAmount, cashGivenNumber, posCart, products, cashGivenInput]);
 
   // Update Status Order
   const handleUpdateOrderStatus = async (orderId: string, status: string) => {
@@ -785,48 +963,236 @@ export default function AdminDashboard() {
         </div>
 
         {/* ========================================================================= */}
-        {/* TAB KASIR POS TOKO (DESAIN RAMAH BAPAK / ORANG TUA - SIMPEL & TOMBOL BESAR) */}
+        {/* TAB KASIR POS TOKO (DESAIN SANGAT SIMPLE, FOCUS MODE - ULTRA CLEAN) */}
         {/* ========================================================================= */}
         {activeTab === 'pos' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* SISI KIRI: KATALOG PRODUK & BARCODE SCANNER */}
-            <div className="lg:col-span-7 space-y-4">
-              {/* Box Barcode Scanner Input */}
-              <form
-                onSubmit={handleBarcodeSubmit}
-                className="bg-amber-500 text-stone-900 p-4 rounded-3xl shadow-md flex items-center gap-3"
-              >
-                <Barcode className="w-8 h-8 text-stone-900 flex-shrink-0" />
-                <div className="flex-1">
-                  <label className="block text-[11px] font-black uppercase tracking-wider text-stone-900 leading-none mb-1">
-                    Scan Barcode Produk / Scan USB Scanner
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* SISI KIRI: BARCODE SCANNER & MONITOR DAFTAR BELANJAAN (LUAS & BERSIH) */}
+            <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-stone-200 shadow-md space-y-5">
+              {/* Tabel / Daftar Item Belanjaan Kasir (Luas & Mudah Dibaca Orang Tua) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+                  <h3 className="font-black text-stone-800 text-base flex items-center gap-2">
+                    <ShoppingBag className="w-5 h-5 text-orange-600" /> Daftar Barang ({posCart.reduce((a, b) => a + b.quantity, 0)} item)
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsManualSearchOpen(true)}
+                      className="text-xs text-stone-700 font-extrabold hover:text-stone-900 cursor-pointer bg-stone-100 hover:bg-stone-200 px-3 py-1.5 rounded-xl border border-stone-300 flex items-center gap-1.5"
+                    >
+                      <Search className="w-3.5 h-3.5 text-orange-600" /> Cari Manual (F2)
+                    </button>
+                    {posCart.length > 0 && (
+                      <button
+                        onClick={() => {
+                          setPosCart([]);
+                          setCashGivenInput('');
+                          scanBufferRef.current = '';
+                        }}
+                        className="text-xs text-red-600 font-extrabold hover:text-red-800 cursor-pointer bg-red-50 px-2.5 py-1.5 rounded-xl border border-red-200"
+                      >
+                        Reset Belanjaan
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="min-h-[360px] max-h-[460px] overflow-y-auto pr-1 space-y-2">
+                  {posCart.length > 0 ? (
+                    posCart.map((item, idx) => (
+                      <div
+                        key={item.product.id}
+                        className="bg-stone-50 p-4 rounded-2xl border-2 border-stone-200 flex items-center justify-between gap-3 hover:border-stone-300 transition-all"
+                      >
+                        <div className="flex items-center gap-3 flex-1">
+                          <span className="w-7 h-7 bg-stone-200 text-stone-700 rounded-lg text-xs font-black flex items-center justify-center">
+                            {idx + 1}
+                          </span>
+                          <div>
+                            <h4 className="font-black text-stone-900 text-base leading-snug">
+                              {item.product.name}
+                            </h4>
+                            <div className="text-xs text-stone-500 font-bold">
+                              {formatRupiah(item.product.price)} / {item.product.unit}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Qty & Subtotal */}
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-stone-300">
+                            <button
+                              onClick={() =>
+                                handleUpdatePosQuantity(
+                                  item.product.id,
+                                  item.quantity - 1
+                                )
+                              }
+                              className="w-8 h-8 bg-stone-100 hover:bg-stone-200 rounded-lg text-stone-900 font-black text-base flex items-center justify-center cursor-pointer"
+                            >
+                              -
+                            </button>
+                            <span className="w-8 text-center font-black text-stone-900 text-base">
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() =>
+                                handleUpdatePosQuantity(
+                                  item.product.id,
+                                  item.quantity + 1
+                                )
+                              }
+                              className="w-8 h-8 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-black text-base flex items-center justify-center cursor-pointer"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <div className="text-right min-w-[100px]">
+                            <span className="text-[10px] font-bold text-stone-400 block uppercase">Subtotal</span>
+                            <span className="font-black text-stone-900 text-base">
+                              {formatRupiah(item.product.price * item.quantity)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-20 text-stone-400 space-y-2 border-2 border-dashed border-stone-200 rounded-3xl">
+                      <Barcode className="w-12 h-12 text-stone-300 animate-bounce" />
+                      <p className="font-extrabold text-sm text-stone-600">
+                        Belum ada barang di-scan.
+                      </p>
+                      <p className="text-xs text-stone-400">
+                        Arahkan scanner ke produk untuk otomatis menambah item.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* SISI KANAN: MONITOR PEMBAYARAN JUMBO & KEMBALIAN (SANGAT JELAS) */}
+            <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-stone-200 shadow-xl space-y-5">
+              <div className="border-b border-stone-200 pb-3">
+                <h3 className="font-black text-stone-900 text-lg flex items-center gap-2">
+                  <Calculator className="w-6 h-6 text-orange-600" /> Ringkasan Pembayaran
+                </h3>
+              </div>
+
+              <form onSubmit={handleCheckoutPos} className="space-y-4">
+                {/* DISPLAY TOTAL BELANJA JUMBO (40px) */}
+                <div className="bg-stone-900 text-white p-5 rounded-2xl space-y-1 shadow-inner border border-stone-800">
+                  <span className="text-xs text-amber-400 font-black block uppercase tracking-wider">
+                    TOTAL BELANJA TOKO
+                  </span>
+                  <div className="text-3xl sm:text-4xl font-black text-amber-400 tracking-tight">
+                    {formatRupiah(posTotalAmount)}
+                  </div>
+                </div>
+
+                {/* DISPLAY UANG DITERIMA */}
+                <div>
+                  <label className="block text-xs font-extrabold text-stone-700 mb-1 flex items-center justify-between">
+                    <span>UANG DITERIMA DARI PEMBELI (Rp):</span>
+                    <span className="text-[11px] text-stone-400 font-normal">(Ketik angka di keyboard)</span>
                   </label>
                   <input
-                    ref={barcodeRef}
-                    type="text"
-                    value={barcodeInput}
-                    onChange={(e) => setBarcodeInput(e.target.value)}
-                    placeholder="Scan atau ketik kode barcode (e.g. 899...)..."
-                    className="w-full px-3.5 py-2.5 bg-white text-stone-900 rounded-xl font-bold text-sm focus:outline-none shadow-inner"
+                    id="pos-cash-input"
+                    type="number"
+                    value={cashGivenInput}
+                    onChange={(e) => {
+                      setCashGivenInput(e.target.value);
+                      scanBufferRef.current = e.target.value;
+                    }}
+                    placeholder="0"
+                    className="w-full px-4 py-3 bg-stone-50 border-2 border-stone-300 rounded-2xl font-black text-stone-900 text-xl focus:ring-2 focus:ring-orange-500 focus:bg-white"
                   />
+                  {/* Preset Tombol Uang Cepat */}
+                  <div className="grid grid-cols-4 gap-2 mt-2">
+                    {[10000, 20000, 50000, 100000].map((nominal) => (
+                      <button
+                        key={nominal}
+                        type="button"
+                        onClick={() => {
+                          setCashGivenInput(String(nominal));
+                          scanBufferRef.current = String(nominal);
+                        }}
+                        className="py-2 bg-stone-100 hover:bg-stone-200 rounded-xl text-xs font-black text-stone-800 border border-stone-300 cursor-pointer active:scale-95"
+                      >
+                        {nominal / 1000}rb
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                {/* DISPLAY UANG KEMBALIAN JUMBO */}
+                <div className="bg-emerald-50 border-2 border-emerald-400 p-4 rounded-2xl flex items-center justify-between text-emerald-950 shadow-xs">
+                  <div>
+                    <span className="text-xs font-black uppercase text-emerald-800 block">UANG KEMBALIAN</span>
+                    <span className="text-2xl font-black text-emerald-700">
+                      {formatRupiah(changeAmount)}
+                    </span>
+                  </div>
+                  {cashGivenNumber > 0 && cashGivenNumber < posTotalAmount && (
+                    <span className="text-xs font-extrabold text-red-600 bg-red-100 px-2.5 py-1 rounded-lg">
+                      Uang Kurang!
+                    </span>
+                  )}
+                </div>
+
+                {/* TOMBOL BAYAR UTAMA */}
                 <button
                   type="submit"
-                  className="px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-white font-extrabold text-xs rounded-xl shadow-md cursor-pointer self-end"
+                  disabled={submittingPos || posCart.length === 0}
+                  className="w-full py-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl font-black text-lg shadow-lg shadow-emerald-700/25 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-98 disabled:opacity-40"
                 >
-                  Cari / Scan
+                  {submittingPos ? 'Memproses...' : 'BAYAR & CETAK STRUK [ENTER]'} <Printer className="w-6 h-6" />
                 </button>
-              </form>
 
-              {/* Filter Kategori & Search Cepat */}
+                {/* PANDUAN KEYBOARD SHORTCUT RAMAH KASIR */}
+                <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl space-y-1.5 text-xs text-amber-950 font-bold">
+                  <div className="text-[11px] font-black uppercase text-amber-900 tracking-wider">
+                    ⚡ PETUNJUK TOMBOL KEYBOARD KASIR:
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-stone-700 font-semibold text-[11px]">
+                    <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">Input Barcode/Uang</kbd> : Scan/Ketik</div>
+                    <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">Space</kbd> : Uang Pas</div>
+                    <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">Enter</kbd> : Bayar & Struk</div>
+                    <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">F2</kbd> : Cari Manual</div>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL PENCARIAN MANUAL (F2) FOR UNBARCODED ITEMS */}
+        {isManualSearchOpen && (
+          <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-2xl rounded-3xl p-6 border border-stone-200 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+                <h3 className="font-black text-stone-900 text-lg flex items-center gap-2">
+                  <Search className="w-5 h-5 text-orange-600" /> Pencarian Manual Produk (F2)
+                </h3>
+                <button
+                  onClick={() => setIsManualSearchOpen(false)}
+                  className="p-1.5 text-stone-400 hover:text-stone-700 rounded-xl cursor-pointer"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
                   <Search className="w-4 h-4 absolute left-3 top-3 text-stone-400" />
                   <input
                     type="text"
+                    autoFocus
                     value={posSearchQuery}
                     onChange={(e) => setPosSearchQuery(e.target.value)}
-                    placeholder="Cari barang kasir..."
+                    placeholder="Cari nama barang atau barcode..."
                     className="w-full pl-9 pr-3 py-2.5 bg-white border border-stone-300 rounded-xl text-stone-900 text-sm font-bold shadow-2xs"
                   />
                 </div>
@@ -844,178 +1210,31 @@ export default function AdminDashboard() {
                 </select>
               </div>
 
-              {/* Grid Produk Kasir (Tombol Besar & Mudah Diklik) */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[520px] overflow-y-auto pr-1">
-                {filteredPosProducts.map((product) => {
-                  const cartItem = posCart.find((i) => i.product.id === product.id);
-                  const qty = cartItem ? cartItem.quantity : 0;
-
-                  return (
-                    <button
-                      key={product.id}
-                      onClick={() => handleAddPosCart(product)}
-                      disabled={!product.inStock}
-                      className={`relative bg-white border-2 p-3 rounded-2xl text-left shadow-xs hover:shadow-md transition-all active:scale-98 cursor-pointer flex flex-col justify-between h-36 ${
-                        qty > 0
-                          ? 'border-orange-500 bg-orange-50/30 ring-2 ring-orange-400/20'
-                          : 'border-stone-200 hover:border-stone-400'
-                      } ${!product.inStock ? 'opacity-40 cursor-not-allowed' : ''}`}
-                    >
-                      {qty > 0 && (
-                        <div className="absolute top-2 right-2 bg-orange-600 text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center shadow-md">
-                          {qty}
-                        </div>
-                      )}
-
-                      <div>
-                        <span className="text-[10px] font-bold text-orange-600 uppercase block leading-none">
-                          {product.category.name}
-                        </span>
-                        <h4 className="font-extrabold text-stone-900 text-sm leading-tight line-clamp-2 mt-1">
-                          {product.name}
-                        </h4>
-                      </div>
-
-                      <div className="mt-2 pt-2 border-t border-stone-100 flex items-center justify-between">
-                        <span className="text-[10px] text-stone-400 font-bold leading-none">
-                          /{product.unit}
-                        </span>
-                        <span className="font-black text-stone-900 text-sm sm:text-base">
-                          {formatRupiah(product.price)}
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* SISI KANAN: STRUK TRANSAKSI KASIR & KALKULATOR KEMBALIAN */}
-            <div className="lg:col-span-5 bg-white p-5 rounded-3xl border border-stone-200 shadow-lg flex flex-col justify-between space-y-4">
-              <div>
-                <div className="flex items-center justify-between border-b border-stone-200 pb-3 mb-3">
-                  <h3 className="font-black text-stone-900 text-base flex items-center gap-2">
-                    <ShoppingBag className="w-5 h-5 text-orange-600" /> Kasir Toko Offine
-                  </h3>
-                  {posCart.length > 0 && (
-                    <button
-                      onClick={() => setPosCart([])}
-                      className="text-xs text-red-500 font-bold hover:text-red-700"
-                    >
-                      Reset Belanjaan
-                    </button>
-                  )}
-                </div>
-
-                {/* List Item Belanjaan Kasir */}
-                <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-                  {posCart.length > 0 ? (
-                    posCart.map((item) => (
-                      <div
-                        key={item.product.id}
-                        className="bg-stone-50 p-2.5 rounded-xl border border-stone-200 flex items-center justify-between text-xs"
-                      >
-                        <div className="flex-1 pr-2">
-                          <h5 className="font-bold text-stone-900 line-clamp-1">
-                            {item.product.name}
-                          </h5>
-                          <span className="text-[10px] text-stone-500 font-semibold">
-                            {formatRupiah(item.product.price)} / {item.product.unit}
-                          </span>
-                        </div>
-
-                        {/* Control Qty Kasir */}
-                        <div className="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-stone-200">
-                          <button
-                            onClick={() =>
-                              handleUpdatePosQuantity(
-                                item.product.id,
-                                item.quantity - 1
-                              )
-                            }
-                            className="w-5 h-5 bg-stone-100 rounded text-stone-700 font-bold flex items-center justify-center"
-                          >
-                            -
-                          </button>
-                          <span className="w-4 text-center font-bold text-stone-900">
-                            {item.quantity}
-                          </span>
-                          <button
-                            onClick={() =>
-                              handleUpdatePosQuantity(
-                                item.product.id,
-                                item.quantity + 1
-                              )
-                            }
-                            className="w-5 h-5 bg-orange-600 text-white rounded font-bold flex items-center justify-center"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-12 text-stone-400 text-xs">
-                      Klik produk atau scan barcode untuk menambah barang kasir.
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[360px] overflow-y-auto pr-1">
+                {filteredPosProducts.map((product) => (
+                  <button
+                    key={product.id}
+                    onClick={() => {
+                      handleAddPosCart(product);
+                      setIsManualSearchOpen(false);
+                    }}
+                    disabled={!product.inStock}
+                    className="bg-stone-50 border border-stone-200 p-3 rounded-2xl text-left shadow-2xs hover:border-orange-500 hover:bg-orange-50/20 transition-all cursor-pointer flex flex-col justify-between h-28"
+                  >
+                    <div>
+                      <span className="text-[10px] font-bold text-orange-600 uppercase block">
+                        {product.category.name}
+                      </span>
+                      <h4 className="font-extrabold text-stone-900 text-xs line-clamp-2 mt-0.5">
+                        {product.name}
+                      </h4>
                     </div>
-                  )}
-                </div>
+                    <div className="font-black text-stone-900 text-sm">
+                      {formatRupiah(product.price)}
+                    </div>
+                  </button>
+                ))}
               </div>
-
-              {/* Ringkasan Total & Hitung Kembalian Otomatis */}
-              <form onSubmit={handleCheckoutPos} className="space-y-3 pt-3 border-t border-stone-200">
-                <div className="bg-stone-900 text-white p-4 rounded-2xl space-y-1">
-                  <span className="text-xs text-stone-400 font-bold block uppercase">
-                    Total Belanja Toko
-                  </span>
-                  <div className="text-2xl sm:text-3xl font-black text-amber-400">
-                    {formatRupiah(posTotalAmount)}
-                  </div>
-                </div>
-
-                {/* Input Uang Dibayar */}
-                <div>
-                  <label className="block text-xs font-bold text-stone-700 mb-1">
-                    Uang Diterima dari Pembeli (Rp)
-                  </label>
-                  <input
-                    type="number"
-                    value={cashGivenInput}
-                    onChange={(e) => setCashGivenInput(e.target.value)}
-                    placeholder="Contoh: 50000"
-                    className="w-full px-3.5 py-2.5 bg-stone-50 border border-stone-300 rounded-xl font-extrabold text-stone-900 text-base focus:ring-2 focus:ring-orange-500"
-                  />
-                  {/* Preset Tombol Uang Pas Cepat */}
-                  <div className="grid grid-cols-4 gap-1.5 mt-2">
-                    {[10000, 20000, 50000, 100000].map((nominal) => (
-                      <button
-                        key={nominal}
-                        type="button"
-                        onClick={() => setCashGivenInput(String(nominal))}
-                        className="py-1 bg-stone-100 hover:bg-stone-200 rounded-lg text-[11px] font-bold text-stone-700 border border-stone-300"
-                      >
-                        {nominal / 1000}rb
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Kembalian Otomatis */}
-                <div className="flex justify-between items-center bg-emerald-50 border border-emerald-300 p-3 rounded-xl text-emerald-900 font-bold text-sm">
-                  <span>UANG KEMBALIAN:</span>
-                  <span className="text-lg font-black text-emerald-700">
-                    {formatRupiah(changeAmount)}
-                  </span>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={submittingPos || posCart.length === 0}
-                  className="w-full py-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl font-black text-base shadow-lg shadow-emerald-700/20 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-98 disabled:opacity-40"
-                >
-                  {submittingPos ? 'Memproses...' : 'BAYAR & CETAK STRUK'} <Printer className="w-5 h-5" />
-                </button>
-              </form>
             </div>
           </div>
         )}

@@ -107,6 +107,38 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
     - Single Database Synchronized:
       * Transaksi kasir offline langsung tercatat di database SQLite yang sama dengan pesanan online
       * Tag status pembeda pesanan web online vs transaksi kasir offline toko
+[x] SPRINT 9: ZERO-MOUSE & GAPTEK-FRIENDLY POS WORKFLOW (SELESAI)
+    - Auto-Scan Barcode Tanpa Klik Mouse:
+      * Scan barang 1, 2, dst langsung otomatis masuk dan menambah kuantitas (+1) tanpa harus menekan tombol apapun di layar
+      * Input scanner otomatis membersihkan diri dan selalu dalam keadaan siap (auto-refocus)
+      * Feedback audio "Beep" ramah kasir minimarket saat barang berhasil terbaca
+    - Smart Keyboard Input Uang Pembeli (Zero-Click):
+      * Ketik angka (0-9 / Numpad) langsung otomatis mengisi nominal "Uang Pembeli" tanpa perlu klik kotak input dengan mouse
+      * Tombol Backspace untuk hapus angka terakhir, tombol 'C' atau 'Esc' untuk reset nominal uang
+    - Keyboard Shortcut Kasir Cepat:
+      * Tombol Space (Spasi): Bayar dengan "Uang Pas" instan
+      * Tombol Enter: Langsung selesaikan transaksi (Bayar) & otomatis cetak struk thermal saat uang sudah cukup
+[x] SPRINT 10: POS KASIR UI REDESIGN (CLEAN & ZERO-DISTRACTION) (SELESAI)
+    - Penyederhanaan Tata Letak POS Kasir Offline (Focus Mode):
+      * Menghilangkan grid kartu produk yang menumpuk di kiri & input pencarian manual agar antarmuka tidak ruwet/ramai
+      * Mengganti tampilan dengan 2 Kolom Utama: Monitor Item Belanjaan Kasir (Kiri) & Monitor Pembayaran Jumbo (Kanan)
+    - Peningkatan Visual Monitor Belanjaan (Kiri):
+      * Header status "READY TO SCAN..." dengan warna animasi indikator siap scan
+      * Tabel/List daftar belanjaan luas dengan font besar & tebal (Nama, Satuan, Qty, Subtotal) yang sangat mudah dibaca
+      * Tombol modal opsional "Pencarian Manual / Barang Tanpa Barcode (F2)" jika benar-benar dibutuhkan
+    - Peningkatan Visual Monitor Pembayaran & Kembalian Jumbo (Kanan):
+      * Tampilan Total Belanja Jumbo (Font 40px+) yang bisa dibaca jelas dari jarak jauh
+      * Kotak Kembalian Kasir ekstra besar dengan warna latar hijau kontras
+      * Tombol "BAYAR & CETAK STRUK [ENTER]" menonjol & petunjuk shortcut keyboard ringkas di bagian bawah
+
+[x] SPRINT 11: FULL AUTOMATIC POS (ZERO-BANNER & SEAMLESS KEYBOARD/SCANNER) (SELESAI)
+    - Eliminasi Banner Scanner & Bentrok Input:
+      * Menghapus banner/kotak input scanner kuning yang merusak kerapian antarmuka
+      * Pengalihan scanner barcode ke listener latar belakang (automatic background scanner listener)
+    - Alur Pembayaran Langsung via Keyboard (Direct Keyboard Cash Entry):
+      * Kasir cukup scan barang (otomatis masuk keranjang & berbunyi chime/beep)
+      * Saat mengetik angka di keyboard (0-9 / Numpad), angka langsung otomatis mengisi kotak "Uang Diterima dari Pembeli" secara real-time
+      * Tekan Enter -> Sistem otomatis mengecek barcode / memproses checkout & mencetak struk thermal 58mm/80mm
 
 --------------------------------------------------------------------------------
 CATATAN TAMBAHAN & BACKLOG MASA DEPAN (Future Iteration)
