@@ -1,15 +1,30 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding initial Warung Duniawi catalog with Barcodes...');
+  console.log('Seeding initial Warung Duniawi catalog with Barcodes & User...');
 
   // 1. Bersihkan data lama
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
   await prisma.product.deleteMany();
   await prisma.category.deleteMany();
+  await prisma.user.deleteMany();
+
+  // 1b. Seed User Admin Resmi
+  const salt = await bcrypt.genSalt(10);
+  const passwordHash = await bcrypt.hash('admin123', salt);
+  await prisma.user.create({
+    data: {
+      email: 'admin@warungduniawi.com',
+      name: 'Pengelola Warung Duniawi',
+      passwordHash,
+      role: 'OWNER',
+    },
+  });
+  console.log('User admin berhasil dibuat: admin@warungduniawi.com / admin123');
 
   // 2. Kategori Utama
   const categories = [

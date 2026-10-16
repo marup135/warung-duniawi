@@ -151,10 +151,46 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Penyesuaian `Dockerfile` (permission folder `/app/public/uploads` untuk user non-root `node`)
       * Penambahan volume Docker persisten `warungduniawi_uploads_data` di `docker-compose.yml` agar foto tidak hilang saat container restart
 
+[x] SPRINT 13: SECURE ROUTE & SERVER-SIDE AUTHENTICATION (SELESAI)
+    - Pengamanan Akses & Penyamaran Route (URL Obfuscation):
+      * Memindahkan halaman admin dari `/admin` ke rute rahasia khusus: `/kasir-447`
+      * Rute `/admin` lama dialihkan ke tampilan "404 Not Found" palsu agar tidak dipindai oleh bot internet
+    - Server-Side Hashing & Session Keamanan:
+      * Model Prisma `User` (`id`, `name`, `email`, `passwordHash`, `createdAt`)
+      * Hashing password menggunakan `bcrypt` (bukan plain text / hardcode)
+      * Autentikasi berbasis HTTP-Only Secure Cookie (kebal XSS, menggantikan `localStorage`)
+      * Proteksi rute via Next.js `middleware.ts` (blokir akses liar sebelum halaman terbuka)
+      * Mekanisme Anti-Brute Force / Rate Limit percobaan login gagal
+
+[ ] SPRINT 14: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
+    - Manajemen Shift Kasir (Buka & Tutup Kasir):
+      * Input Modal Awal Kas Kecil saat kasir mulai buka toko (misal: Rp 100.000)
+      * Pencatatan kas keluar manual (misal: beli es batu, bayar sampah, kembalian darurat)
+      * Tutup Kasir (End of Shift): Kasir menghitung uang fisik di laci -> Sistem otomatis mencocokkan total sistem vs fisik (Cek Selisih Pas / Minus / Lebih)
+      * Cetak struk rekap penutupan shift kasir ke thermal printer 58mm/80mm
+    - Laporan Keuangan & Perhitungan Laba Bersih (Profit & Loss):
+      * Field HPP (Harga Pokok Penjualan / Harga Modal Kulakan) pada setiap produk
+      * Dashboard analitik: Total Omzet Penjualan, Total Modal (HPP), dan Total Laba Bersih
+      * Filter rentang waktu analitik: Hari Ini, Kemarin, 7 Hari Terakhir, Bulan Ini
+      * Breakdown metode bayar: Tunai vs QRIS vs Transfer
+
+[ ] SPRINT 15: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
+    - Manajemen Kuantitas Stok Riil:
+      * Mengubah status stok dari sekadar boolean (Ada/Habis) menjadi angka kuantitas riil (`stockQuantity`)
+      * Pengurangan stok otomatis setiap ada transaksi kasir POS atau pesanan online masuk
+      * Pengembalian stok otomatis jika pesanan online dibatalkan
+    - Indikator & Peringatan Stok Menipis (Low-Stock Alert):
+      * Pengaturan batas minimum stok (misal: warning jika sisa < 3 pcs)
+      * Badge peringatan mencolok di dashboard untuk barang yang hampir habis
+    - Riwayat Kulakan / Barang Masuk (Restock Log):
+      * Formulir pencatatan barang kulakan baru: Jumlah barang masuk, tanggal, supplier/distributor, dan update harga modal
+      * Riwayat mutasi stok (kartu stok) untuk melacak selisih barang hilang/rusak
+
 --------------------------------------------------------------------------------
 CATATAN TAMBAHAN & BACKLOG MASA DEPAN (Future Iteration)
 --------------------------------------------------------------------------------
+- [Future] Fitur Multi-Akun Karyawan / Role Kasir vs Owner terpisah (Ditunda - Sesuai Permintaan).
 - [Future] Fitur Pengantaran ke Rumah (radius & ongkir lokal).
 - [Future] Integrasi Payment Gateway QRIS Dinamis otomatis.
-- [Future] Laporan penjualan harian & rekap keuntungan.
 ==============================================================================
+

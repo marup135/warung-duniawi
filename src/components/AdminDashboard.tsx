@@ -143,36 +143,67 @@ export default function AdminDashboard() {
   const [submittingPos, setSubmittingPos] = useState(false);
   const [isManualSearchOpen, setIsManualSearchOpen] = useState(false);
 
-  // Cek Auth Session Lokal
+  const [loginError, setLoginError] = useState('');
+  const [submittingLogin, setSubmittingLogin] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // Cek Auth Session Server-side
   useEffect(() => {
-    const savedAuth = localStorage.getItem('wd_admin_auth');
-    if (savedAuth === 'true') {
-      setIsAuthenticated(true);
-    }
+    const checkUserSession = async () => {
+      try {
+        const res = await fetch('/api/auth/session');
+        const json = await res.json();
+        if (json.authenticated) {
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (err) {
+        setIsAuthenticated(false);
+      } finally {
+        setCheckingSession(false);
+      }
+    };
+    checkUserSession();
   }, []);
 
-  // Login Email & Password Pengelola
-  const handleLogin = (e: React.FormEvent) => {
+  // Login Email & Password Pengelola ke Server API
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Email: warungduniawi@gmail.com / admin@warungduniawi.com / admin
-    // Password: admin123 / duniawi
-    const isValidEmail =
-      emailInput.toLowerCase().includes('admin') ||
-      emailInput.toLowerCase().includes('warung') ||
-      emailInput.toLowerCase() === 'duniawi';
-    const isValidPass = passwordInput === 'admin123' || passwordInput === 'duniawi';
+    setLoginError('');
+    setSubmittingLogin(true);
 
-    if (isValidEmail && isValidPass) {
-      setIsAuthenticated(true);
-      localStorage.setItem('wd_admin_auth', 'true');
-    } else {
-      alert('Email atau Password salah! (Contoh: admin@warungduniawi.com / admin123)');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: emailInput,
+          password: passwordInput,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setIsAuthenticated(true);
+        setPasswordInput('');
+      } else {
+        setLoginError(json.message || 'Login gagal');
+      }
+    } catch (err) {
+      setLoginError('Terjadi kesalahan koneksi server');
+    } finally {
+      setSubmittingLogin(false);
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/session', { method: 'POST' });
+    } catch (e) {
+      console.error(e);
+    }
     setIsAuthenticated(false);
-    localStorage.removeItem('wd_admin_auth');
   };
 
   // Suara Beep Ramah Kasir Minimarket untuk Scan Barcode (Pitch Tinggi)
@@ -770,6 +801,18 @@ export default function AdminDashboard() {
     }
   };
 
+  // Loading screen saat cek sesi awal
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-orange-600 animate-spin" />
+          <p className="text-sm font-semibold text-stone-600">Memverifikasi sesi kasir...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Tampilan Form Login Email & Password Pengelola
   if (!isAuthenticated) {
     return (
@@ -783,9 +826,16 @@ export default function AdminDashboard() {
               Akses Kasir & Admin
             </h2>
             <p className="text-xs text-stone-500">
-              Masukkan Email dan Password resmi pengelola Warung Duniawi.
+              Portal internal operasional Warung Duniawi.
             </p>
           </div>
+
+          {loginError && (
+            <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+              <span>{loginError}</span>
+            </div>
+          )}
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
@@ -793,7 +843,7 @@ export default function AdminDashboard() {
                 <Mail className="w-3.5 h-3.5 text-stone-500" /> Email Admin / Kasir
               </label>
               <input
-                type="text"
+                type="email"
                 required
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
@@ -811,16 +861,28 @@ export default function AdminDashboard() {
                 required
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
-                placeholder="Masukkan password (admin123)"
+                placeholder="Masukkan password"
                 className="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-sm rounded-xl shadow-md transition-all active:scale-98 cursor-pointer"
+              disabled={submittingLogin}
+              className={`w-full py-3.5 rounded-xl text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 ${
+                submittingLogin
+                  ? 'bg-orange-400 cursor-not-allowed'
+                  : 'bg-orange-600 hover:bg-orange-700 active:scale-98 cursor-pointer'
+              }`}
             >
-              Masuk ke Dashboard Kasir
+              {submittingLogin ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Memverifikasi...</span>
+                </>
+              ) : (
+                <span>Masuk ke Dashboard Kasir</span>
+              )}
             </button>
           </form>
         </div>
