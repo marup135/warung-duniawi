@@ -12,7 +12,10 @@ services:
       - DATABASE_URL=file:/app/data/prod.db
     volumes:
       - warungduniawi-data:/app/data
+      - warungduniawi-uploads:/app/public/uploads
 
 volumes:
   warungduniawi-data:
     name: warungduniawi_sqlite_data
+  warungduniawi-uploads:
+    name: warungduniawi_uploads_data

@@ -28,6 +28,9 @@ import {
   Check,
   Mail,
   Lock,
+  Upload,
+  Image as ImageIcon,
+  Loader2,
 } from 'lucide-react';
 
 interface OrderItem {
@@ -126,6 +129,7 @@ export default function AdminDashboard() {
   const [newProdBarcode, setNewProdBarcode] = useState('');
   const [newProdDesc, setNewProdDesc] = useState('');
   const [newProdImg, setNewProdImg] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   // Category Management State
   const [newCatName, setNewCatName] = useState('');
@@ -725,18 +729,46 @@ export default function AdminDashboard() {
     return matchCat && matchSearch;
   });
 
-  // Preset Gambar Bawaan Warung Sederhana
-  const sampleImagePresets = [
-    { label: '🌶️ Bumbu Dapur', url: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&w=500&q=80' },
-    { label: '🌻 Minyak Goreng', url: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=500&q=80' },
-    { label: '🥚 Telur Ayam', url: 'https://images.unsplash.com/photo-1506976785307-8732e854ad03?auto=format&fit=crop&w=500&q=80' },
-    { label: '🍜 Indomie / Mie', url: 'https://images.unsplash.com/photo-1612927601601-6638404737ce?auto=format&fit=crop&w=500&q=80' },
-    { label: '🚬 Rokok', url: 'https://images.unsplash.com/photo-1527061011665-3652c757a4d4?auto=format&fit=crop&w=500&q=80' },
-    { label: '🍦 Es Krim', url: 'https://images.unsplash.com/photo-1501443762994-82bd5dace89a?auto=format&fit=crop&w=500&q=80' },
-    { label: '🍞 Roti / Snack', url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=500&q=80' },
-    { label: '🥤 Minuman Segar', url: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=500&q=80' },
-    { label: '🧼 Sabun / Kebersihan', url: 'https://images.unsplash.com/photo-1583947215259-38e31be8751f?auto=format&fit=crop&w=500&q=80' },
-  ];
+  // Upload Foto Produk ke Server (/public/uploads)
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Harap pilih file gambar (JPG, PNG, WebP, dll)');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ukuran foto maksimal 5MB');
+      return;
+    }
+
+    try {
+      setUploadingImage(true);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const json = await res.json();
+      if (json.success && json.url) {
+        setNewProdImg(json.url);
+      } else {
+        alert(json.message || 'Gagal mengunggah foto');
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('Terjadi kesalahan saat mengunggah foto');
+    } finally {
+      setUploadingImage(false);
+      // Reset input value agar file yang sama bisa dipilih ulang bila perlu
+      e.target.value = '';
+    }
+  };
 
   // Tampilan Form Login Email & Password Pengelola
   if (!isAuthenticated) {
@@ -1668,40 +1700,70 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* URL Gambar & Opsi Gambar Preset Bawaan */}
+              {/* Upload Foto Produk */}
               <div>
                 <label className="block font-bold text-stone-700 mb-1">
-                  URL Foto Produk
+                  Foto Produk
                 </label>
-                <input
-                  type="url"
-                  value={newProdImg}
-                  onChange={(e) => setNewProdImg(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900"
-                />
 
-                {/* Preset Gambar Cepat */}
-                <div className="mt-2 space-y-1">
-                  <span className="text-[10px] text-stone-500 font-bold block">
-                    Atau Pilih Foto Preset Bawaan Warung:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pt-1">
-                    {sampleImagePresets.map((preset, idx) => (
+                {/* Upload Box & Preview */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <label className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                      uploadingImage
+                        ? 'bg-stone-100 border-stone-300 text-stone-400 cursor-not-allowed'
+                        : 'bg-orange-50/50 border-orange-300 hover:bg-orange-100/50 text-orange-700'
+                    }`}>
+                      {uploadingImage ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span className="text-xs font-bold">Sedang Mengunggah...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-5 h-5 text-orange-600" />
+                          <span className="text-xs font-bold">Pilih / Ambil Foto (Maks 5MB)</span>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={uploadingImage}
+                        className="hidden"
+                      />
+                    </label>
+
+                    {newProdImg && (
                       <button
-                        key={idx}
                         type="button"
-                        onClick={() => setNewProdImg(preset.url)}
-                        className={`text-[10px] px-2 py-1 rounded-lg border font-semibold cursor-pointer ${
-                          newProdImg === preset.url
-                            ? 'bg-orange-600 text-white border-orange-600'
-                            : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200'
-                        }`}
+                        onClick={() => setNewProdImg('')}
+                        className="px-3 py-3 bg-stone-100 hover:bg-red-50 hover:text-red-600 text-stone-500 rounded-xl text-xs font-bold border border-stone-200 transition-colors cursor-pointer"
+                        title="Hapus Foto"
                       >
-                        {preset.label}
+                        Hapus Foto
                       </button>
-                    ))}
+                    )}
                   </div>
+
+                  {/* Preview Foto */}
+                  {newProdImg ? (
+                    <div className="relative w-full h-36 bg-stone-100 rounded-xl overflow-hidden border border-stone-200 flex items-center justify-center group">
+                      <img
+                        src={newProdImg}
+                        alt="Preview Produk"
+                        className="w-full h-full object-contain"
+                      />
+                      <div className="absolute bottom-1 right-2 bg-stone-900/60 text-white text-[10px] px-2 py-0.5 rounded-md backdrop-blur-xs">
+                        Foto Aktif
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-stone-50 rounded-xl border border-stone-200/80 flex items-center gap-2 text-stone-400 text-xs">
+                      <ImageIcon className="w-4 h-4 text-stone-400 shrink-0" />
+                      <span>Belum ada foto yang dipilih. Silakan klik tombol di atas untuk upload.</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

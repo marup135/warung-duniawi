@@ -97,8 +97,6 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
     - Auth Security:
       * Login `/admin` menggunakan pasangan Email & Password resmi pengelola (Email: `admin@warungduniawi.com` / Password: `admin123`)
       * Session login tersimpan aman di browser pengelola (`localStorage session`)
-    - Peningkatan Upload/Kelola Foto Produk:
-      * Input URL foto & pilihan preset gambar bawaan warung (Sembako, Rokok, Es Krim, Roti, Minuman, dll)
     - Modul Layar Kasir Toko POS (Ramah Bapak / Orang Tua - Simple & Tombol Besar):
       * Tab utama "KASIR TOKO (POS)" dengan grid produk besar, harga jelas, & pencarian cepat
       * Fitur Barcode Scanner USB / Input Barcode langsung otomatis masuk keranjang kasir
@@ -139,6 +137,19 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Kasir cukup scan barang (otomatis masuk keranjang & berbunyi chime/beep)
       * Saat mengetik angka di keyboard (0-9 / Numpad), angka langsung otomatis mengisi kotak "Uang Diterima dari Pembeli" secara real-time
       * Tekan Enter -> Sistem otomatis mengecek barcode / memproses checkout & mencetak struk thermal 58mm/80mm
+
+[x] SPRINT 12: DIRECT PRODUCT IMAGE UPLOAD (HAPUS FOTO PRESET / TEMPLATE) (SELESAI)
+    - Migrasi Fitur Foto Produk:
+      * Menghapus tombol-tombol template/preset foto bawaan warung
+      * Mengganti dengan fitur Upload File Foto langsung dari perangkat (Galeri / Kamera HP / File Komputer)
+      * Komponen UI: Tombol drag & drop / klik upload dengan indikator loading, preview foto aktif, dan tombol "Hapus Foto"
+    - Backend Upload API:
+      * Endpoint POST `/api/admin/upload` (multipart/form-data)
+      * Validasi tipe file (image/*) dan pembatasan ukuran file (maksimal 5MB)
+      * Penyimpanan file langsung ke direktori publik `/public/uploads` dengan penamaan unik
+    - Integrasi Container Docker:
+      * Penyesuaian `Dockerfile` (permission folder `/app/public/uploads` untuk user non-root `node`)
+      * Penambahan volume Docker persisten `warungduniawi_uploads_data` di `docker-compose.yml` agar foto tidak hilang saat container restart
 
 --------------------------------------------------------------------------------
 CATATAN TAMBAHAN & BACKLOG MASA DEPAN (Future Iteration)
