@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { customerName, customerPhone, items, notes } = body;
+    const { customerName, customerPhone, items, notes, pickupMethod, deliveryAddress } = body;
 
     if (!customerName || !customerPhone || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -13,8 +13,16 @@ export async function POST(request: Request) {
       );
     }
 
+    const isDelivery = pickupMethod === 'DELIVERY';
+    if (isDelivery && (!deliveryAddress || !deliveryAddress.trim())) {
+      return NextResponse.json(
+        { success: false, message: 'Mohon isi detail alamat / patokan rumah di KP. Pamundayan 1' },
+        { status: 400 }
+      );
+    }
+
     // Hitung total belanja dari database
-    let totalAmount = 0;
+    let itemsTotal = 0;
     const orderItemsData = [];
 
     for (const item of items) {
@@ -30,7 +38,7 @@ export async function POST(request: Request) {
       }
 
       const itemSubtotal = product.price * item.quantity;
-      totalAmount += itemSubtotal;
+      itemsTotal += itemSubtotal;
 
       orderItemsData.push({
         productId: product.id,
@@ -39,6 +47,13 @@ export async function POST(request: Request) {
         subtotal: itemSubtotal,
       });
     }
+
+    // Hitung Ongkir: Belanja >= 100.000 Gratis, selain itu Rp 2.000 (jika diantar)
+    let shippingFee = 0;
+    if (isDelivery) {
+      shippingFee = itemsTotal >= 100000 ? 0 : 2000;
+    }
+    const totalAmount = itemsTotal + shippingFee;
 
     // Generate kode unik order: WD-TANGGAL-RANDOM (cth: WD-261002-891)
     const todayStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
@@ -51,10 +66,12 @@ export async function POST(request: Request) {
         orderNumber,
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
-        pickupMethod: 'PICKUP',
-        paymentMethod: 'CASH_OR_QRIS_ON_SITE',
+        pickupMethod: isDelivery ? 'DELIVERY' : 'PICKUP',
+        deliveryAddress: isDelivery ? deliveryAddress.trim() : null,
+        paymentMethod: isDelivery ? 'COD_CASH_OR_QRIS' : 'CASH_OR_QRIS_ON_SITE',
         status: 'PENDING',
         totalAmount,
+        shippingFee,
         notes: notes ? notes.trim() : null,
         items: {
           create: orderItemsData,

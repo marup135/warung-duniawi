@@ -19,8 +19,10 @@ interface Order {
   customerName: string;
   customerPhone: string;
   pickupMethod: string;
+  deliveryAddress?: string | null;
   paymentMethod: string;
   totalAmount: number;
+  shippingFee?: number | null;
   amountPaid?: number | null;
   changeAmount?: number | null;
   orderSource?: string | null;
@@ -74,7 +76,19 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
         {order.customerPhone && order.customerPhone !== '-' && (
           <div>NO WA     : {order.customerPhone}</div>
         )}
-        <div>TIPE      : {isPosOffline ? 'TRANSAKSI KASIR TOKO' : 'AMBIL DI WARUNG'}</div>
+        <div>
+          TIPE      :{' '}
+          {isPosOffline
+            ? 'TRANSAKSI KASIR TOKO'
+            : order.pickupMethod === 'DELIVERY'
+            ? 'DIANTAR (KP. PAMUNDAYAN 1)'
+            : 'AMBIL DI WARUNG'}
+        </div>
+        {order.pickupMethod === 'DELIVERY' && order.deliveryAddress && (
+          <div className="font-bold border-t border-dashed border-black pt-1 mt-1">
+            ALAMAT/PATOKAN : {order.deliveryAddress.toUpperCase()}
+          </div>
+        )}
       </div>
 
       {/* List Items */}
@@ -94,6 +108,12 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
 
       {/* Ringkasan Bayar & Kembalian */}
       <div className="space-y-1 text-[10.5px]">
+        {order.shippingFee !== undefined && order.shippingFee !== null && order.shippingFee > 0 && (
+          <div className="flex justify-between text-[10px]">
+            <span>ONGKIR :</span>
+            <span>{formatRupiah(order.shippingFee)}</span>
+          </div>
+        )}
         <div className="flex justify-between font-extrabold text-xs">
           <span>TOTAL  :</span>
           <span>{formatRupiah(order.totalAmount)}</span>

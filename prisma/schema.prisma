@@ -55,6 +55,7 @@ model Order {
   paymentMethod   String      @default("CASH_OR_QRIS_ON_SITE")
   status          String      @default("PENDING") // PENDING, PROCESSING, READY, COMPLETED, CANCELLED
   totalAmount     Int
+  shippingFee     Int         @default(0) // Ongkos kirim (Rp 2.000 atau Rp 0)
   amountPaid      Int?        @default(0) // Uang dibayar saat transaksi kasir
   changeAmount    Int?        @default(0) // Uang kembalian kasir
   orderSource     String      @default("ONLINE_WEB") // "ONLINE_WEB" atau "POS_KASIR"

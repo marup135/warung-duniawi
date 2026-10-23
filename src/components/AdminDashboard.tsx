@@ -51,9 +51,11 @@ interface Order {
   customerName: string;
   customerPhone: string;
   pickupMethod: string;
+  deliveryAddress?: string | null;
   paymentMethod: string;
   status: string;
   totalAmount: number;
+  shippingFee?: number | null;
   amountPaid?: number | null;
   changeAmount?: number | null;
   orderSource?: string | null;
@@ -1315,6 +1317,17 @@ export default function AdminDashboard() {
                             <span className="text-xs text-stone-500 font-medium">
                               WA: {order.customerPhone}
                             </span>
+                            <div className="mt-1">
+                              {order.pickupMethod === 'DELIVERY' ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-orange-100 text-orange-900 border border-orange-300">
+                                  🛵 DIANTAR (KP. Pamundayan 1)
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-700 border border-stone-200">
+                                  🏪 AMBIL DI WARUNG
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           <div className="text-right">
@@ -1341,6 +1354,18 @@ export default function AdminDashboard() {
                             </span>
                           </div>
                         </div>
+
+                        {/* Detail Alamat Jika Diantar */}
+                        {order.pickupMethod === 'DELIVERY' && order.deliveryAddress && (
+                          <div className="mb-3 p-2.5 bg-orange-50/80 border border-orange-200 rounded-2xl text-xs">
+                            <span className="font-extrabold text-orange-950 block text-[11px]">
+                              📍 Patokan/Alamat Rumah:
+                            </span>
+                            <p className="text-stone-800 font-semibold mt-0.5">
+                              {order.deliveryAddress}
+                            </p>
+                          </div>
+                        )}
 
                         {/* Detail Items */}
                         <div className="space-y-2 py-1 text-xs">
@@ -1370,7 +1395,7 @@ export default function AdminDashboard() {
                       <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between">
                         <div>
                           <span className="text-[10px] text-stone-400 font-bold block leading-none">
-                            Total Tagihan
+                            Total Tagihan {order.shippingFee && order.shippingFee > 0 ? `(Termasuk Ongkir ${formatRupiah(order.shippingFee)})` : ''}
                           </span>
                           <span className="text-lg font-black text-stone-900">
                             {formatRupiah(order.totalAmount)}

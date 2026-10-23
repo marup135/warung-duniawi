@@ -105,7 +105,7 @@ export default function CatalogView() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] pb-28 text-stone-900 font-sans">
+    <div className="min-h-screen bg-[#FAF8F5] pb-28 text-stone-900 font-sans overflow-x-hidden">
       {/* Header Sticky */}
       <Header
         cartItemCount={totalCartCount}
@@ -113,21 +113,21 @@ export default function CatalogView() {
       />
 
       {/* Main Content Area */}
-      <main className="max-w-6xl mx-auto px-4 pt-6">
+      <main className="max-w-6xl mx-auto px-3.5 sm:px-4 pt-4 sm:pt-6">
         {/* Banner Hero Warung Cerah */}
-        <div className="mb-6 p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-lg relative overflow-hidden">
-          <div className="absolute -right-10 -bottom-10 opacity-15 pointer-events-none">
-            <Store className="w-64 h-64 text-white" />
+        <div className="mb-5 sm:mb-6 p-5 sm:p-8 rounded-3xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-lg relative overflow-hidden">
+          <div className="absolute -right-8 -bottom-8 opacity-15 pointer-events-none">
+            <Store className="w-52 h-52 sm:w-64 sm:h-64 text-white" />
           </div>
           <div className="relative z-10 max-w-xl">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold mb-3">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-bold mb-2.5">
               <Sparkles className="w-3.5 h-3.5" /> Warung Sembako & Harian Modern
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
+            <h2 className="text-xl sm:text-3xl font-black tracking-tight leading-tight">
               Belanja Sembako Tanpa Antre di Warung Duniawi!
             </h2>
-            <p className="mt-2 text-stone-100 text-sm sm:text-base leading-relaxed font-medium">
-              Pilih minyak, telur, rokok, es krim, roti, dan minuman langsung dari HP Anda. Ambil pesanan tanpa perlu nunggu lama di kasir.
+            <p className="mt-2 text-stone-100 text-xs sm:text-base leading-relaxed font-medium">
+              Pilih kebutuhan harian langsung dari HP. Bisa ambil di warung atau diantar ke rumah (Khusus KP. Pamundayan 1).
             </p>
           </div>
         </div>

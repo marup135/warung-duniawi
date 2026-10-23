@@ -16,7 +16,7 @@ Membangun web app pemesanan mandiri (self-order) dan sistem kasir/admin untuk
 Warung Sembako Duniawi dengan alur:
 1. Pembeli memilih barang (sembako, rokok, es krim, roti, dll) dari katalog cerah.
 2. Checkout tanpa ribet daftar akun (Guest checkout: Nama & WhatsApp).
-3. Pilihan pengambilan: "Ambil di Warung" (aktif) & "Diantar" (Coming Soon).
+3. Pilihan pengambilan: "Ambil di Warung" & "Diantar ke Rumah" (Khusus KP. Pamundayan 1, Ongkir Rp 2.000 / Free Ongkir min. belanja 100k).
 4. Pembayaran di kasir (keterangan: QRIS, Tunai, Transfer).
 5. Notifikasi real-time bunyi ke layar pemilik warung saat ada pesanan baru.
 6. Fitur cetak struk otomatis/manual ke thermal printer kasir (58mm/80mm).
@@ -162,7 +162,25 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Proteksi rute via Next.js `middleware.ts` (blokir akses liar sebelum halaman terbuka)
       * Mekanisme Anti-Brute Force / Rate Limit percobaan login gagal
 
-[ ] SPRINT 14: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
+[x] SPRINT 14: LOCAL DELIVERY (KP. PAMUNDAYAN 1) & MOBILE RESPONSIVE POLISH (SELESAI)
+    - Mobile Responsiveness & Anti-Overflow Optimization:
+      * Perbaikan CartDrawer di smartphone: Hilangkan offset pl-10 agar pas 100% lebar layar HP tanpa terpotong
+      * Optimasi ProductCard & CatalogView untuk layar sempit (font harga, rasio foto, touch target tombol + / -)
+      * Proteksi horizontal overflow di seluruh halaman mobile (bebas glitch geser samping)
+    - Fitur Pengantaran Lokal (Local Delivery):
+      * Integrasi opsi pemilihan: "Ambil di Warung" vs "Diantar ke Rumah"
+      * Pembatasan radius wilayah: Khusus warga KP. Pamundayan 1 (dengan input detail patokan/rumah)
+      * Perhitungan Ongkos Kirim Otomatis:
+        - Belanja di bawah Rp 100.000 -> Ongkir Rp 2.000
+        - Belanja Rp 100.000 ke atas -> FREE ONGKIR (Rp 0)
+        - Gamifikasi bar informasi sisa nominal belanja untuk mendapatkan Free Ongkir
+      * Metode Bayar Pengantaran: COD (Bayar di Tempat) Tunai / QRIS
+    - Integrasi Backend & Struk:
+      * Penambahan kolom `shippingFee` pada schema database Prisma `Order`
+      * Indikator badge mencolok pesanan [🛵 DIANTAR (KP. Pamundayan 1)] pada dashboard kasir
+      * Cetak alamat pengantaran, patokan rumah, dan ongkir pada thermal receipt 58mm/80mm
+
+[ ] SPRINT 15: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
     - Manajemen Shift Kasir (Buka & Tutup Kasir):
       * Input Modal Awal Kas Kecil saat kasir mulai buka toko (misal: Rp 100.000)
       * Pencatatan kas keluar manual (misal: beli es batu, bayar sampah, kembalian darurat)
@@ -174,7 +192,7 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Filter rentang waktu analitik: Hari Ini, Kemarin, 7 Hari Terakhir, Bulan Ini
       * Breakdown metode bayar: Tunai vs QRIS vs Transfer
 
-[ ] SPRINT 15: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
+[ ] SPRINT 16: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
     - Manajemen Kuantitas Stok Riil:
       * Mengubah status stok dari sekadar boolean (Ada/Habis) menjadi angka kuantitas riil (`stockQuantity`)
       * Pengurangan stok otomatis setiap ada transaksi kasir POS atau pesanan online masuk
@@ -190,7 +208,6 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
 CATATAN TAMBAHAN & BACKLOG MASA DEPAN (Future Iteration)
 --------------------------------------------------------------------------------
 - [Future] Fitur Multi-Akun Karyawan / Role Kasir vs Owner terpisah (Ditunda - Sesuai Permintaan).
-- [Future] Fitur Pengantaran ke Rumah (radius & ongkir lokal).
 - [Future] Integrasi Payment Gateway QRIS Dinamis otomatis.
 ==============================================================================
 
