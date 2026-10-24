@@ -108,6 +108,7 @@ export default function AdminDashboard() {
   const [pendingCount, setPendingCount] = useState(0);
   const [selectedPrintOrder, setSelectedPrintOrder] = useState<Order | null>(null);
   const [autoPrintEnabled, setAutoPrintEnabled] = useState(false);
+  const autoPrintEnabledRef = useRef<boolean>(false);
   const previousOrderCountRef = useRef<number>(0);
   const printedOrderIdsRef = useRef<Set<string>>(new Set());
 
@@ -115,7 +116,9 @@ export default function AdminDashboard() {
   useEffect(() => {
     const savedAutoPrint = localStorage.getItem('wd_auto_print_enabled');
     if (savedAutoPrint !== null) {
-      setAutoPrintEnabled(savedAutoPrint === 'true');
+      const isEnabled = savedAutoPrint === 'true';
+      setAutoPrintEnabled(isEnabled);
+      autoPrintEnabledRef.current = isEnabled;
     }
   }, []);
 
@@ -123,10 +126,12 @@ export default function AdminDashboard() {
   const handleToggleAutoPrint = () => {
     setAutoPrintEnabled((prev) => {
       const nextVal = !prev;
+      autoPrintEnabledRef.current = nextVal;
       localStorage.setItem('wd_auto_print_enabled', String(nextVal));
       return nextVal;
     });
   };
+
 
 
   // Products State & Search Filter
@@ -274,9 +279,10 @@ export default function AdminDashboard() {
   // Trigger Print Receipt
   const handlePrintReceipt = (order: Order) => {
     setSelectedPrintOrder(order);
+    // Beri waktu 250ms agar React selesai mount / render komponen ThermalReceipt ke DOM
     setTimeout(() => {
       window.print();
-    }, 100);
+    }, 250);
   };
 
   // Fetch Orders
@@ -302,7 +308,8 @@ export default function AdminDashboard() {
           const newOrders = fetchedOrders.filter((o) => !printedOrderIdsRef.current.has(o.id));
           if (newOrders.length > 0) {
             newOrders.forEach((o) => printedOrderIdsRef.current.add(o.id));
-            if (autoPrintEnabled) {
+            if (autoPrintEnabledRef.current) {
+              console.log('[Auto-Print] Mencetak pesanan online baru:', newOrders[0].orderNumber);
               // Cetak pesanan online terbaru
               handlePrintReceipt(newOrders[0]);
             }
