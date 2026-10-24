@@ -31,7 +31,9 @@ body {
   html, body {
     margin: 0 !important;
     padding: 0 !important;
-    width: 100% !important;
+    width: 48mm !important;
+    height: auto !important;
+    overflow: hidden !important;
     background: #fff !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
@@ -39,22 +41,18 @@ body {
 
   .struk-kasir {
     display: block !important;
-    /* Lebar aman area cetak */
-    width: 48mm !important;
-    max-width: 48mm !important;
+    width: 46mm !important;
+    max-width: 46mm !important;
     box-sizing: border-box !important;
 
-    /* Beri jarak aman dari tepi kiri fisik printer */
-    margin-left: 4mm !important;
+    /* Margin kiri aman dan beri margin atas agar tidak terpotong */
+    margin-left: 3.5mm !important;
     margin-right: auto !important;
-    margin-top: 0 !important;
+    margin-top: 5mm !important;   /* Mencegah header kepotong */
     margin-bottom: 0 !important;
-    padding-left: 2mm !important;
-    padding-right: 1mm !important;
-    padding-top: 1mm !important;
-    padding-bottom: 3mm !important;
 
-    /* Tipografi */
+    padding: 1mm 1mm 2mm 1mm !important;
+
     font-family: 'Courier New', Courier, monospace !important;
     font-size: 11px !important;
     font-weight: 600 !important;
@@ -62,23 +60,11 @@ body {
     letter-spacing: -0.2px !important;
     color: #000 !important;
 
+    /* Cegah duplikasi / halaman ke-2 */
     page-break-inside: avoid !important;
     page-break-after: avoid !important;
     break-inside: avoid !important;
     break-after: avoid !important;
-  }
-
-  /* Pastikan elemen baris memiliki ruang cukup dan tidak overflow */
-  .struk-kasir table,
-  .struk-kasir .row,
-  .struk-kasir div {
-    box-sizing: border-box !important;
-  }
-
-  /* Hindari pemotongan teks pada label kolom kiri */
-  .struk-kasir .label,
-  .struk-kasir td:first-child {
-    padding-left: 1mm !important;
   }
 
   /* Sembunyikan semua elemen selain struk */
@@ -90,10 +76,12 @@ body {
     visibility: visible;
   }
 
+  /* Sembunyikan elemen web lainnya */
   .no-print, header, nav, button, footer, aside {
     display: none !important;
   }
 }
+
 
 
 
