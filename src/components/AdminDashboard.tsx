@@ -169,6 +169,54 @@ export default function AdminDashboard() {
   const [submittingPos, setSubmittingPos] = useState(false);
   const [isManualSearchOpen, setIsManualSearchOpen] = useState(false);
 
+  // Quick Add Product State (F2 Shortcut)
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [quickAddPrice, setQuickAddPrice] = useState('');
+  const [quickAddName, setQuickAddName] = useState('');
+  const quickPriceInputRef = useRef<HTMLInputElement>(null);
+  const cashInputRef = useRef<HTMLInputElement>(null);
+
+  // Buka Modal Tambah Produk Cepat (F2)
+  const handleOpenQuickAdd = () => {
+    setIsQuickAddOpen(true);
+    setQuickAddPrice('');
+    setQuickAddName('');
+    setTimeout(() => {
+      quickPriceInputRef.current?.focus();
+    }, 50);
+  };
+
+  // Submit Tambah Produk Cepat (F2) langsung masuk keranjang kasir
+  const handleQuickAddSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const priceNum = Number(quickAddPrice);
+    if (!priceNum || priceNum <= 0) {
+      alert('Masukkan harga produk yang valid!');
+      return;
+    }
+
+    const itemName = quickAddName.trim() || 'Barang Lain-lain';
+    const manualProduct: Product = {
+      id: `manual-${Date.now()}`,
+      name: itemName,
+      price: priceNum,
+      unit: 'item',
+      categoryId: categories[0]?.id || 'lain-lain',
+      inStock: true,
+      category: {
+        id: categories[0]?.id || 'lain-lain',
+        name: categories[0]?.name || 'Lain-lain',
+      },
+    };
+
+    handleAddPosCart(manualProduct);
+    setIsQuickAddOpen(false);
+    setQuickAddPrice('');
+    setQuickAddName('');
+    scanBufferRef.current = '';
+  };
+
+
   const [loginError, setLoginError] = useState('');
   const [submittingLogin, setSubmittingLogin] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
@@ -429,6 +477,8 @@ export default function AdminDashboard() {
       const payload = {
         items: posCart.map((item) => ({
           productId: item.product.id,
+          name: item.product.name,
+          price: item.product.price,
           quantity: item.quantity,
         })),
         amountPaid: cashPaid,
@@ -475,13 +525,32 @@ export default function AdminDashboard() {
         activeEl?.tagName === 'TEXTAREA' ||
         activeEl?.tagName === 'SELECT';
 
-      // Jika sedang fokus di input modal pencarian manual F2 atau modal edit, abaikan
+      // Jika sedang fokus di modal tambah cepat F2 atau modal lainnya, abaikan global listener
       if (isOtherInputFocused && activeEl?.id !== 'pos-cash-input') {
+        if (e.key === 'Escape') {
+          setIsQuickAddOpen(false);
+          setIsManualSearchOpen(false);
+        }
         return;
       }
 
-      // 0. TOMBOL F2 -> BUKA / TUTUP MODAL PENCARIAN BARANG MANUAL
+      // 0. TOMBOL F2 -> BUKA MODAL TAMBAH PRODUK CEPAT (HARGA UTAMA, NAMA OPSIONAL)
       if (e.key === 'F2') {
+        e.preventDefault();
+        handleOpenQuickAdd();
+        return;
+      }
+
+      // 0.1 TOMBOL F4 atau F11 -> FOKUS KE KOTAK UANG PEMBELI
+      if (e.key === 'F4' || e.key === 'F11') {
+        e.preventDefault();
+        cashInputRef.current?.focus();
+        cashInputRef.current?.select();
+        return;
+      }
+
+      // 0.2 TOMBOL F3 -> BUKA / TUTUP PENCARIAN KATALOG LENGKAP
+      if (e.key === 'F3') {
         e.preventDefault();
         setIsManualSearchOpen((prev) => !prev);
         return;
@@ -1071,10 +1140,17 @@ export default function AdminDashboard() {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
+                      onClick={handleOpenQuickAdd}
+                      className="text-xs text-white font-black bg-orange-600 hover:bg-orange-700 px-3 py-1.5 rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95"
+                    >
+                      <Plus className="w-4 h-4" /> + Barang Manual (F2)
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setIsManualSearchOpen(true)}
                       className="text-xs text-stone-700 font-extrabold hover:text-stone-900 cursor-pointer bg-stone-100 hover:bg-stone-200 px-3 py-1.5 rounded-xl border border-stone-300 flex items-center gap-1.5"
                     >
-                      <Search className="w-3.5 h-3.5 text-orange-600" /> Cari Manual (F2)
+                      <Search className="w-3.5 h-3.5 text-orange-600" /> Katalog (F3)
                     </button>
                     {posCart.length > 0 && (
                       <button
@@ -1085,7 +1161,7 @@ export default function AdminDashboard() {
                         }}
                         className="text-xs text-red-600 font-extrabold hover:text-red-800 cursor-pointer bg-red-50 px-2.5 py-1.5 rounded-xl border border-red-200"
                       >
-                        Reset Belanjaan
+                        Reset
                       </button>
                     )}
                   </div>
@@ -1192,6 +1268,7 @@ export default function AdminDashboard() {
                     <span className="text-[11px] text-stone-400 font-normal">(Ketik angka di keyboard)</span>
                   </label>
                   <input
+                    ref={cashInputRef}
                     id="pos-cash-input"
                     type="number"
                     value={cashGivenInput}
@@ -1247,13 +1324,13 @@ export default function AdminDashboard() {
                 {/* PANDUAN KEYBOARD SHORTCUT RAMAH KASIR */}
                 <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl space-y-1.5 text-xs text-amber-950 font-bold">
                   <div className="text-[11px] font-black uppercase text-amber-900 tracking-wider">
-                    ⚡ PETUNJUK TOMBOL KEYBOARD KASIR:
+                    ⚡ TOMBOL SHORTCUT KEYBOARD KASIR:
                   </div>
                   <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-stone-700 font-semibold text-[11px]">
-                    <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">Input Barcode/Uang</kbd> : Scan/Ketik</div>
+                    <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">F2</kbd> : + Barang Manual</div>
+                    <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">F4</kbd> : Uang Pembeli</div>
                     <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">Space</kbd> : Uang Pas</div>
                     <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">Enter</kbd> : Bayar & Struk</div>
-                    <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">F2</kbd> : Cari Manual</div>
                   </div>
                 </div>
               </form>
@@ -1261,13 +1338,100 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* MODAL PENCARIAN MANUAL (F2) FOR UNBARCODED ITEMS */}
+        {/* ========================================================================= */}
+        {/* MODAL INPUT BARANG CEPAT (F2) - KHUSUS BARANG TANPA BARCODE / NON-KATALOG */}
+        {/* ========================================================================= */}
+        {isQuickAddOpen && (
+          <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-md rounded-3xl p-6 border-2 border-orange-500 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-100">
+              <div className="flex items-center justify-between border-b border-stone-200 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl bg-orange-100 text-orange-600 font-black flex items-center justify-center text-lg">
+                    F2
+                  </div>
+                  <div>
+                    <h3 className="font-black text-stone-900 text-base leading-tight">
+                      Tambah Barang Cepat
+                    </h3>
+                    <p className="text-xs text-stone-500">
+                      Cukup masukkan harga, nama opsional
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsQuickAddOpen(false)}
+                  className="p-1.5 text-stone-400 hover:text-stone-700 rounded-xl cursor-pointer"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleQuickAddSubmit} className="space-y-4">
+                {/* 1. INPUT HARGA UTAMA (OTOMATIS FOKUS DI SINI) */}
+                <div>
+                  <label className="block text-xs font-black text-stone-800 mb-1 flex items-center justify-between">
+                    <span>HARGA BARANG (Rp) *</span>
+                    <span className="text-[11px] text-orange-600 font-extrabold">(Wajib Diisi)</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-3.5 font-black text-stone-400 text-lg">Rp</span>
+                    <input
+                      ref={quickPriceInputRef}
+                      type="number"
+                      required
+                      autoFocus
+                      value={quickAddPrice}
+                      onChange={(e) => setQuickAddPrice(e.target.value)}
+                      placeholder="0"
+                      className="w-full pl-12 pr-4 py-3 bg-orange-50/50 border-2 border-orange-400 rounded-2xl font-black text-stone-900 text-2xl focus:ring-4 focus:ring-orange-500/20 focus:bg-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. INPUT NAMA BARANG (OPSIONAL) */}
+                <div>
+                  <label className="block text-xs font-bold text-stone-700 mb-1 flex items-center justify-between">
+                    <span>NAMA BARANG (OPSIONAL):</span>
+                    <span className="text-[11px] text-stone-400 font-normal">Boleh Dikosongkan</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={quickAddName}
+                    onChange={(e) => setQuickAddName(e.target.value)}
+                    placeholder="Contoh: Es Batu, Kerupuk, Rokok Eceran (Default: Barang Lain-lain)"
+                    className="w-full px-4 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 text-sm font-semibold focus:ring-2 focus:ring-orange-500 focus:bg-white"
+                  />
+                </div>
+
+                {/* TOMBOL AKSI CEPAT */}
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsQuickAddOpen(false)}
+                    className="w-1/3 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-sm rounded-xl cursor-pointer"
+                  >
+                    Batal (Esc)
+                  </button>
+                  <button
+                    type="submit"
+                    className="w-2/3 py-3 bg-orange-600 hover:bg-orange-700 text-white font-black text-sm rounded-xl shadow-md shadow-orange-600/20 cursor-pointer active:scale-98 flex items-center justify-center gap-1.5"
+                  >
+                    <Plus className="w-5 h-5" /> Masukkan ke Kasir [Enter]
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL PENCARIAN MANUAL KATALOG (F3) */}
         {isManualSearchOpen && (
           <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
             <div className="bg-white w-full max-w-2xl rounded-3xl p-6 border border-stone-200 shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-stone-200 pb-3">
                 <h3 className="font-black text-stone-900 text-lg flex items-center gap-2">
-                  <Search className="w-5 h-5 text-orange-600" /> Pencarian Manual Produk (F2)
+                  <Search className="w-5 h-5 text-orange-600" /> Katalog Lengkap Produk (F3)
                 </h3>
                 <button
                   onClick={() => setIsManualSearchOpen(false)}

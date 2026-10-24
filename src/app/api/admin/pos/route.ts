@@ -18,24 +18,62 @@ export async function POST(request: Request) {
     const orderItemsData = [];
 
     for (const item of items) {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
-      });
+      let product = null;
+
+      if (item.productId && item.productId.startsWith('manual-')) {
+        // Produk Manual Cepat Kasir (F2)
+        const manualName = (item.name || 'Barang Lain-lain').trim();
+        const manualPrice = Number(item.price) || 0;
+
+        // Cari atau buat kategori umum "Lain-lain"
+        let genericCategory = await prisma.category.findFirst({
+          where: { slug: 'lain-lain' },
+        });
+
+        if (!genericCategory) {
+          genericCategory = await prisma.category.create({
+            data: {
+              name: 'Lain-lain',
+              slug: 'lain-lain',
+              icon: '📦',
+              sortOrder: 99,
+            },
+          });
+        }
+
+        // Cari apakah produk manual dengan nama dan harga ini sudah ada, jika belum buat baru
+        const manualSlug = `manual-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        product = await prisma.product.create({
+          data: {
+            name: manualName,
+            slug: manualSlug,
+            price: manualPrice,
+            unit: 'item',
+            categoryId: genericCategory.id,
+            inStock: true,
+          },
+        });
+      } else {
+        product = await prisma.product.findUnique({
+          where: { id: item.productId },
+        });
+      }
 
       if (!product) {
         return NextResponse.json(
-          { success: false, message: `Produk ID ${item.productId} tidak ditemukan` },
+          { success: false, message: `Produk tidak ditemukan` },
           { status: 400 }
         );
       }
 
-      const itemSubtotal = product.price * item.quantity;
+      const itemPrice = item.price !== undefined ? Number(item.price) : product.price;
+      const itemSubtotal = itemPrice * item.quantity;
       totalAmount += itemSubtotal;
 
       orderItemsData.push({
         productId: product.id,
         quantity: item.quantity,
-        price: product.price,
+        price: itemPrice,
         subtotal: itemSubtotal,
       });
     }
