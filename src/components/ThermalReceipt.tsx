@@ -59,8 +59,11 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
   return (
     <div
       id="printable-receipt"
-      className="struk-kasir struk-container hidden print:block text-black font-mono text-[13px] font-semibold leading-normal"
+      className="struk-kasir struk-container hidden print:block text-black font-mono text-[11px] font-bold leading-normal"
     >
+      {/* Baris kosong pemisah agar teks toko tidak kena pisau pemotong */}
+      <div style={{ height: '14px' }}></div>
+
       {/* Header Struk */}
       <div className="text-center font-bold border-b border-black pb-2 mb-2">
         <div className="text-base font-black uppercase tracking-wider">WARUNG DUNIAWI</div>
@@ -152,6 +155,9 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
         <div>Selamat Belanja Kembali di</div>
         <div className="font-bold text-[11px]">Warung Duniawi</div>
       </div>
+
+      {/* Baris kosong penutup di paling bawah */}
+      <div style={{ height: '18px' }}></div>
     </div>
   );
 }
