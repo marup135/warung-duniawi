@@ -1,0 +1,8 @@
+node_modules
+.next
+.git
+.env*.local
+README.md
+planing.txt
+CLAUDE.md
+DEPLOYMENT_GUIDE.md

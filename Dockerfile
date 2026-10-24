@@ -13,6 +13,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm ci --legacy-peer-deps
+RUN npx prisma generate
 
 # 2. Build aplikasi
 FROM base AS builder
@@ -21,7 +22,6 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL="file:/app/data/prod.db"
-RUN npx prisma generate
 RUN npm run build
 
 # 3. Production runner
