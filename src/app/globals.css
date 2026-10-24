@@ -23,21 +23,44 @@ body {
 
 /* Gaya cetak thermal printer 58mm / 80mm */
 @media print {
+  @page {
+    size: 58mm auto;
+    margin: 0mm;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    background: #fff !important;
+  }
+
+  /* Sembunyikan semua elemen UI web kecuali struk kasir */
   body * {
     visibility: hidden;
   }
-  #printable-receipt, #printable-receipt * {
+
+  #printable-receipt,
+  #printable-receipt * {
     visibility: visible;
   }
+
   #printable-receipt {
+    display: block !important;
     position: absolute;
     left: 0;
     top: 0;
-    width: 58mm; /* Standar thermal mini */
-    margin: 0;
-    padding: 4px;
+    width: 48mm; /* Area printable efektif kertas 58mm */
+    margin: 0 auto !important;
+    padding: 2mm 0 !important;
     font-size: 11px;
     line-height: 1.2;
-    color: #000;
+    color: #000 !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-after: avoid !important;
+    break-inside: avoid !important;
   }
 }
+

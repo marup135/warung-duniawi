@@ -57,7 +57,10 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
   const isPosOffline = order.orderSource === 'POS_KASIR' || order.pickupMethod === 'POS_OFFLINE';
 
   return (
-    <div id="printable-receipt" className="hidden print:block text-black font-mono text-[11px] leading-tight">
+    <div
+      id="printable-receipt"
+      className="struk-container hidden print:block text-black font-mono text-[11px] leading-tight"
+    >
       {/* Header Struk */}
       <div className="text-center font-bold border-b border-black pb-2 mb-2">
         <div className="text-sm font-extrabold uppercase">WARUNG DUNIAWI</div>
