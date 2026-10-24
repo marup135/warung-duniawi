@@ -21,46 +21,47 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Gaya cetak thermal printer 58mm (WOYA / ZJ-58 Calibrated) */
+/* Gaya cetak thermal printer 58mm (Final WOYA WP58D Calibrated) */
 @media print {
   @page {
     size: 58mm auto;
-    margin: 0;
+    margin: 0mm;
   }
 
   html, body {
     margin: 0 !important;
     padding: 0 !important;
-    width: 48mm !important;
-    height: auto !important;
-    overflow: hidden !important;
-    background: #fff !important;
+    background: #ffffff !important;
+    width: 100% !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
+  /* Elemen paling luar struk */
   .struk-kasir {
     display: block !important;
-    width: 46mm !important;
-    max-width: 46mm !important;
+    width: 48mm !important;
+    max-width: 48mm !important;
     box-sizing: border-box !important;
-
-    /* Margin kiri aman dan beri margin atas agar tidak terpotong */
-    margin-left: 3.5mm !important;
+    
+    /* Margin kiri mengunci teks agar tidak terpotong tepi head */
+    margin-left: 3mm !important;
     margin-right: auto !important;
-    margin-top: 5mm !important;   /* Mencegah header kepotong */
+    margin-top: 0 !important;
     margin-bottom: 0 !important;
-
-    padding: 1mm 1mm 2mm 1mm !important;
+    
+    /* Jeda atas: memberi ruang feed agar teks WARUNG DUNIAWI tidak terpotong pisau/head */
+    padding-top: 8mm !important;
+    padding-bottom: 5mm !important;
+    padding-left: 1mm !important;
+    padding-right: 1mm !important;
 
     font-family: 'Courier New', Courier, monospace !important;
     font-size: 11px !important;
-    font-weight: 600 !important;
-    line-height: 1.25 !important;
-    letter-spacing: -0.2px !important;
-    color: #000 !important;
+    font-weight: bold !important;
+    line-height: 1.3 !important;
+    color: #000000 !important;
 
-    /* Cegah duplikasi / halaman ke-2 */
     page-break-inside: avoid !important;
     page-break-after: avoid !important;
     break-inside: avoid !important;
@@ -76,11 +77,12 @@ body {
     visibility: visible;
   }
 
-  /* Sembunyikan elemen web lainnya */
+  /* Sembunyikan elemen dashboard selain struk */
   .no-print, header, nav, button, footer, aside {
     display: none !important;
   }
 }
+
 
 
 
