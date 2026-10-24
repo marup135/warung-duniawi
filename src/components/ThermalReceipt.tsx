@@ -59,7 +59,7 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
   return (
     <div
       id="printable-receipt"
-      className="struk-container hidden print:block text-black font-mono text-[12px] font-semibold leading-normal"
+      className="struk-kasir struk-container hidden print:block text-black font-mono text-[13px] font-semibold leading-normal"
     >
       {/* Header Struk */}
       <div className="text-center font-bold border-b border-black pb-2 mb-2">
