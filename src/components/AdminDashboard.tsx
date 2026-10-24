@@ -109,6 +109,25 @@ export default function AdminDashboard() {
   const [selectedPrintOrder, setSelectedPrintOrder] = useState<Order | null>(null);
   const [autoPrintEnabled, setAutoPrintEnabled] = useState(false);
   const previousOrderCountRef = useRef<number>(0);
+  const printedOrderIdsRef = useRef<Set<string>>(new Set());
+
+  // Load status Auto-Print dari localStorage saat mount
+  useEffect(() => {
+    const savedAutoPrint = localStorage.getItem('wd_auto_print_enabled');
+    if (savedAutoPrint !== null) {
+      setAutoPrintEnabled(savedAutoPrint === 'true');
+    }
+  }, []);
+
+  // Simpan status Auto-Print ke localStorage
+  const handleToggleAutoPrint = () => {
+    setAutoPrintEnabled((prev) => {
+      const nextVal = !prev;
+      localStorage.setItem('wd_auto_print_enabled', String(nextVal));
+      return nextVal;
+    });
+  };
+
 
   // Products State & Search Filter
   const [products, setProducts] = useState<Product[]>([]);
@@ -272,13 +291,21 @@ export default function AdminDashboard() {
         const currentPending = fetchedOrders.filter((o) => o.status === 'PENDING').length;
         setPendingCount(currentPending);
 
-        if (
-          previousOrderCountRef.current > 0 &&
-          fetchedOrders.length > previousOrderCountRef.current
-        ) {
+        // Deteksi pesanan baru yang masuk
+        if (previousOrderCountRef.current === 0) {
+          // Saat pertama kali buka dashboard, catat ID yang sudah ada agar tidak mencetak riwayat lama
+          fetchedOrders.forEach((o) => printedOrderIdsRef.current.add(o.id));
+        } else if (fetchedOrders.length > previousOrderCountRef.current) {
           playChimeSound();
-          if (autoPrintEnabled && fetchedOrders[0]) {
-            handlePrintReceipt(fetchedOrders[0]);
+
+          // Cari pesanan baru yang belum pernah dicetak otomatis
+          const newOrders = fetchedOrders.filter((o) => !printedOrderIdsRef.current.has(o.id));
+          if (newOrders.length > 0) {
+            newOrders.forEach((o) => printedOrderIdsRef.current.add(o.id));
+            if (autoPrintEnabled) {
+              // Cetak pesanan online terbaru
+              handlePrintReceipt(newOrders[0]);
+            }
           }
         }
         previousOrderCountRef.current = fetchedOrders.length;
@@ -912,6 +939,25 @@ export default function AdminDashboard() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Tombol Toggle Auto-Print Struk Pesanan Masuk */}
+            <button
+              onClick={handleToggleAutoPrint}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${
+                autoPrintEnabled
+                  ? 'bg-emerald-600 text-white border-emerald-500 shadow-xs'
+                  : 'bg-stone-800 text-stone-300 hover:text-white border-stone-700'
+              }`}
+              title="Cetak struk secara otomatis saat ada pesanan online baru"
+            >
+              <Printer className={`w-3.5 h-3.5 ${autoPrintEnabled ? 'text-white' : 'text-stone-400'}`} />
+              <span>Auto-Print:</span>
+              <span className={`px-1.5 py-0.2 rounded-md text-[10px] font-black ${
+                autoPrintEnabled ? 'bg-emerald-950 text-emerald-200' : 'bg-stone-700 text-stone-400'
+              }`}>
+                {autoPrintEnabled ? 'AKTIF' : 'MATI'}
+              </span>
+            </button>
+
             <button
               onClick={playChimeSound}
               className="p-2 text-stone-300 hover:text-white bg-stone-800 rounded-xl text-xs flex items-center gap-1 cursor-pointer"
