@@ -48,15 +48,15 @@ body {
 
   #printable-receipt {
     display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 48mm; /* Area printable efektif kertas 58mm */
-    margin: 0 auto !important;
-    padding: 2mm 0 !important;
+    position: relative !important;
+    width: 56mm !important; /* Memaksimalkan lebar kertas roll 58mm */
+    max-width: 56mm !important;
+    margin: 0 !important;
+    padding: 1mm 1.5mm !important;
     font-size: 11px;
-    line-height: 1.2;
+    line-height: 1.25;
     color: #000 !important;
+    box-sizing: border-box !important;
     page-break-after: avoid !important;
     page-break-inside: avoid !important;
     break-after: avoid !important;

@@ -70,36 +70,35 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
       </div>
 
       {/* Info Transaksi */}
-      <div className="border-b border-black pb-2 mb-2 text-[10px] space-y-0.5">
+      <div className="border-b border-black pb-1.5 mb-1.5 text-[10px] space-y-0.5">
         <div className="flex justify-between font-bold">
-          <span>NO: {order.orderNumber}</span>
+          <span>{order.orderNumber}</span>
           <span>{formattedDate}</span>
         </div>
-        <div>PELANGGAN : {order.customerName.toUpperCase()}</div>
+        <div className="truncate">PELANGGAN: {order.customerName.toUpperCase()}</div>
         {order.customerPhone && order.customerPhone !== '-' && (
-          <div>NO WA     : {order.customerPhone}</div>
+          <div>NO WA: {order.customerPhone}</div>
         )}
         <div>
-          TIPE      :{' '}
-          {isPosOffline
-            ? 'TRANSAKSI KASIR TOKO'
+          TIPE: {isPosOffline
+            ? 'KASIR TOKO'
             : order.pickupMethod === 'DELIVERY'
             ? 'DIANTAR (KP. PAMUNDAYAN 1)'
             : 'AMBIL DI WARUNG'}
         </div>
         {order.pickupMethod === 'DELIVERY' && order.deliveryAddress && (
-          <div className="font-bold border-t border-dashed border-black pt-1 mt-1">
-            ALAMAT/PATOKAN : {order.deliveryAddress.toUpperCase()}
+          <div className="font-bold border-t border-dashed border-black pt-1 mt-1 text-[9.5px]">
+            ALAMAT: {order.deliveryAddress.toUpperCase()}
           </div>
         )}
       </div>
 
       {/* List Items */}
-      <div className="border-b border-black pb-2 mb-2 space-y-1">
+      <div className="border-b border-black pb-1.5 mb-1.5 space-y-1">
         {order.items.map((item) => (
           <div key={item.id} className="text-[10px]">
-            <div className="font-bold line-clamp-1">{item.product.name}</div>
-            <div className="flex justify-between pl-2 text-[9.5px]">
+            <div className="font-bold">{item.product.name}</div>
+            <div className="flex justify-between pl-1 text-[9.5px]">
               <span>
                 {item.quantity} x {formatRupiah(item.price)}
               </span>
@@ -110,32 +109,32 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
       </div>
 
       {/* Ringkasan Bayar & Kembalian */}
-      <div className="space-y-1 text-[10.5px]">
+      <div className="space-y-0.5 text-[10.5px]">
         {order.shippingFee !== undefined && order.shippingFee !== null && order.shippingFee > 0 && (
           <div className="flex justify-between text-[10px]">
-            <span>ONGKIR :</span>
+            <span>ONGKIR:</span>
             <span>{formatRupiah(order.shippingFee)}</span>
           </div>
         )}
-        <div className="flex justify-between font-extrabold text-xs">
-          <span>TOTAL  :</span>
+        <div className="flex justify-between font-extrabold text-xs pt-0.5 border-t border-dashed border-black">
+          <span>TOTAL:</span>
           <span>{formatRupiah(order.totalAmount)}</span>
         </div>
 
         {isPosOffline && order.amountPaid ? (
           <>
             <div className="flex justify-between text-[10px]">
-              <span>BAYAR  :</span>
+              <span>BAYAR:</span>
               <span>{formatRupiah(order.amountPaid)}</span>
             </div>
             <div className="flex justify-between text-[10px] font-bold">
-              <span>KEMBALI:</span>
+              <span>KEMBALIAN:</span>
               <span>{formatRupiah(order.changeAmount || 0)}</span>
             </div>
           </>
         ) : (
           <div className="flex justify-between text-[10px]">
-            <span>BAYAR DI KASIR:</span>
+            <span>BAYAR:</span>
             <span>QRIS / TUNAI</span>
           </div>
         )}
