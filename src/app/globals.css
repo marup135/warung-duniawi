@@ -21,37 +21,56 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Gaya cetak thermal printer 58mm (ZJ-58 Native Driver Compatible) */
+/* Gaya cetak thermal printer 58mm (WOYA / ZJ-58 Calibrated) */
 @media print {
   @page {
-    size: 48mm auto; /* 48mm adalah lebar fisik cetak kepala printer thermal 58mm */
-    margin: 0;
+    /* Set ukuran kertas 58mm dengan tinggi dinamis */
+    size: 58mm auto;
+    margin: 0mm;
   }
 
   html, body {
     margin: 0 !important;
     padding: 0 !important;
-    width: 48mm !important;
-    background: #ffffff !important;
+    width: 100% !important;
+    background: #fff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  /* Elemen pembungkus struk */
+  /* Kontainer utama struk */
   .struk-kasir {
     display: block !important;
-    width: 48mm !important;
-    max-width: 48mm !important;
+    /* Lebar optimal agar pas di tengah kertas 58mm */
+    width: 52mm !important;
+    max-width: 52mm !important;
     box-sizing: border-box !important;
-    margin: 0 !important;
-    padding: 2mm 1mm !important;
-    font-family: monospace, 'Courier New', sans-serif !important;
-    font-size: 11px !important;
-    font-weight: 500 !important;
-    line-height: 1.25 !important;
+    
+    /* Beri margin kiri 2.5mm agar teks kiri tidak terpotong pisau/head */
+    margin-left: 2.5mm !important;
+    margin-right: auto !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 1mm 1mm 3mm 1mm !important;
+
+    /* Penyesuaian font agar tajam, padat, dan tidak terlalu tebal */
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+    letter-spacing: -0.2px !important;
     color: #000000 !important;
+    
     page-break-inside: avoid !important;
     page-break-after: avoid !important;
     break-inside: avoid !important;
     break-after: avoid !important;
+  }
+
+  /* Pastikan tabel/baris struk mengisi penuh lebar 52mm */
+  .struk-kasir table,
+  .struk-kasir .row {
+    width: 100% !important;
   }
 
   /* Sembunyikan semua elemen selain struk */
@@ -63,8 +82,10 @@ body {
     visibility: visible;
   }
 
-  .no-print, header, nav, button, footer {
+  /* Sembunyikan elemen dashboard selain struk */
+  .no-print, header, nav, button, footer, aside {
     display: none !important;
   }
 }
+
 
