@@ -243,7 +243,36 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Dokumentasi setup Auto Power-On di BIOS (Restore on AC/Power Loss).
       * Dokumentasi konfigurasi tombol fisik power untuk 1-klik safe shutdown (/etc/systemd/logind.conf).
 
-[ ] SPRINT 18: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
+[x] SPRINT 18: PRODUCT MANAGEMENT UX POLISH & BULK CSV IMPORT (SELESAI)
+    - Fix Modal Tambah / Edit Produk (Center Viewport Lock):
+      * Memperbaiki posisi modal agar tepat di tengah layar (center screen, fixed inset-0 flex items-center justify-center).
+      * Mengisolasi scrollbar hanya di bagian isian form (internal scroll max-h-[85vh]), sehingga header modal & tombol simpan tidak kabur ke bawah.
+      * Auto-focus langsung ke kolom input Nama Produk saat modal dibuka tanpa perlu geser mouse/scroll layar.
+    - Redesign Sub-Menu Aksi Produk (Bebaskan Bar Tab dari Overflow):
+      * Memindahkan tombol "Ekspor Produk" dan "+ Tambah Produk" dari bar navigasi tab utama ke sub-header di atas tabel produk.
+      * Menghilangkan scrollbar horizontal abu-abu yang mengganggu di bar tab.
+      * Sub-menu rapi di tab Kelola Produk:
+        - Kiri: Info total produk terdaftar (`Daftar Katalog Produk • 52 Item`).
+        - Kanan: Tombol aksi terpadu (`+ Tambah Produk`, `📥 Ekspor CSV`, `📤 Impor Produk CSV`).
+    - Fitur Baru: Bulk Import Produk (CSV / Excel):
+      * Endpoint API POST `/api/admin/products/import` (Mendukung delimiter koma `,` dan titik koma `;` standar Excel).
+      * Mode Update & Insert: Jika barcode/nama cocok, perbarui harga/satuan; jika belum ada, buat produk baru otomatis.
+      * Modal Impor Produk:
+        - Tombol "Unduh Template CSV" sebagai panduan format kolom.
+        - Area upload file CSV dengan drag-and-drop & file picker.
+        - Notifikasi laporan hasil impor (jumlah sukses, jumlah terupdate, dan error jika ada).
+    - Fitur Pemilihan & Hapus Produk Massal (Batch Delete):
+      * Checkbox di header tabel produk untuk "Pilih Semua Produk" (Select All).
+      * Checkbox pada masing-masing baris item produk untuk pemilihan fleksibel.
+      * Floating Batch Action Bar yang menampilkan jumlah produk terpilih dan tombol "Hapus X Produk Terpilih" dengan konfirmasi aman.
+      * Endpoint DELETE `/api/admin/products?ids=...` yang membersihkan relasi transaksi atomik secara massal.
+    - Pengaturan Kredensial Akun (Ubah Email & Password Admin):
+      * Endpoint API PUT `/api/auth/account` dengan verifikasi password lama (bcrypt) dan update session cookie.
+      * Modul antarmuka di Tab Pengaturan & Kios (`/kasir-447`): Form ubah email & password baru dengan konfirmasi keamanan.
+    - Hardening Keamanan Akses Login:
+      * Menghapus placeholder bawaan yang membocorkan pola email (`admin@warungduniawi.com`) dan password di form login `/kasir-447`.
+
+[ ] SPRINT 19: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
     - Manajemen Shift Kasir (Buka & Tutup Kasir):
       * Input Modal Awal Kas Kecil saat kasir mulai buka toko (misal: Rp 100.000)
       * Pencatatan kas keluar manual (misal: beli es batu, bayar sampah, kembalian darurat)
@@ -255,7 +284,7 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Filter rentang waktu analitik: Hari Ini, Kemarin, 7 Hari Terakhir, Bulan Ini
       * Breakdown metode bayar: Tunai vs QRIS vs Transfer
 
-[ ] SPRINT 19: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
+[ ] SPRINT 20: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
     - Manajemen Kuantitas Stok Riil:
       * Mengubah status stok dari sekadar boolean (Ada/Habis) menjadi angka kuantitas riil (`stockQuantity`)
       * Pengurangan stok otomatis setiap ada transaksi kasir POS atau pesanan online masuk

@@ -41,6 +41,8 @@ import {
   RotateCw,
   Monitor,
   ShieldAlert,
+  FileText,
+  FileUp,
 } from 'lucide-react';
 
 interface OrderItem {
@@ -275,6 +277,26 @@ export default function AdminDashboard() {
   const [newProdImg, setNewProdImg] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
 
+  // Modal Import CSV State
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importingCsv, setImportingCsv] = useState(false);
+  const [importResult, setImportResult] = useState<string | null>(null);
+
+  // Bulk Selection & Batch Delete Products State
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [batchDeleting, setBatchDeleting] = useState(false);
+
+  // Account Settings (Ubah Email & Password) State
+  const [currentAccountEmail, setCurrentAccountEmail] = useState('');
+  const [newAccountEmail, setNewAccountEmail] = useState('');
+  const [currentAccountPassword, setCurrentAccountPassword] = useState('');
+  const [newAccountPassword, setNewAccountPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [savingAccount, setSavingAccount] = useState(false);
+  const [accountSuccessMsg, setAccountSuccessMsg] = useState<string | null>(null);
+  const [accountErrorMsg, setAccountErrorMsg] = useState<string | null>(null);
+
   // Category Management State
   const [newCatName, setNewCatName] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('📦');
@@ -347,6 +369,10 @@ export default function AdminDashboard() {
         const json = await res.json();
         if (json.authenticated) {
           setIsAuthenticated(true);
+          if (json.user?.email) {
+            setCurrentAccountEmail(json.user.email);
+            setNewAccountEmail(json.user.email);
+          }
         } else {
           setIsAuthenticated(false);
         }
@@ -378,6 +404,10 @@ export default function AdminDashboard() {
       const json = await res.json();
       if (json.success) {
         setIsAuthenticated(true);
+        if (json.user?.email) {
+          setCurrentAccountEmail(json.user.email);
+          setNewAccountEmail(json.user.email);
+        }
         setPasswordInput('');
       } else {
         setLoginError(json.message || 'Login gagal');
@@ -969,12 +999,90 @@ export default function AdminDashboard() {
       const json = await res.json();
       if (json.success) {
         alert(json.message || 'Produk berhasil dihapus!');
+        setSelectedProductIds((prev) => prev.filter((id) => id !== productId));
         fetchProducts();
       } else {
         alert(json.message);
       }
     } catch (err) {
       alert('Gagal menghapus produk.');
+    }
+  };
+
+  // Hapus Massal Produk yang Dipilih (Batch Delete)
+  const handleBatchDeleteProducts = async () => {
+    if (selectedProductIds.length === 0) return;
+
+    if (
+      !confirm(
+        `PERINGATAN: Apakah Anda yakin ingin menghapus ${selectedProductIds.length} produk yang dipilih secara permanen dari database?`
+      )
+    ) {
+      return;
+    }
+
+    setBatchDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/products?ids=${selectedProductIds.join(',')}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        alert(json.message || `${selectedProductIds.length} produk berhasil dihapus!`);
+        setSelectedProductIds([]);
+        fetchProducts();
+      } else {
+        alert(json.message || 'Gagal menghapus produk terpilih.');
+      }
+    } catch {
+      alert('Terjadi kesalahan koneksi saat menghapus produk terpilih.');
+    } finally {
+      setBatchDeleting(false);
+    }
+  };
+
+  // Simpan Perubahan Email & Password Akun Pengelola
+  const handleUpdateAccountSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAccountSuccessMsg(null);
+    setAccountErrorMsg(null);
+
+    if (newAccountPassword && newAccountPassword !== confirmNewPassword) {
+      setAccountErrorMsg('Konfirmasi password baru tidak cocok!');
+      return;
+    }
+
+    if (newAccountPassword && newAccountPassword.length < 6) {
+      setAccountErrorMsg('Password baru minimal harus 6 karakter!');
+      return;
+    }
+
+    setSavingAccount(true);
+    try {
+      const res = await fetch('/api/auth/account', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: newAccountEmail,
+          currentPassword: currentAccountPassword,
+          newPassword: newAccountPassword || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAccountSuccessMsg(data.message);
+        setCurrentAccountEmail(newAccountEmail);
+        setCurrentAccountPassword('');
+        setNewAccountPassword('');
+        setConfirmNewPassword('');
+      } else {
+        setAccountErrorMsg(data.message || 'Gagal memperbarui akun.');
+      }
+    } catch {
+      setAccountErrorMsg('Terjadi kesalahan koneksi server.');
+    } finally {
+      setSavingAccount(false);
     }
   };
 
@@ -1028,6 +1136,64 @@ export default function AdminDashboard() {
   // Download / Ekspor Database Seluruh Produk ke File CSV
   const handleExportProductsCsv = () => {
     window.open('/api/admin/products/export', '_blank');
+  };
+
+  // Unduh Contoh Template CSV Impor Produk
+  const handleDownloadCsvTemplate = () => {
+    const headers = ['Barcode', 'Nama Produk', 'Kategori', 'Harga', 'Satuan', 'Status Stok', 'Deskripsi'];
+    const sampleRows = [
+      ['"899123456789"', '"Beras Premium 5kg"', '"Sembako & Dapur"', '75000', '"sak"', '"Tersedia"', '"Beras pulen kualitas super"'],
+      ['"899987654321"', '"Minyak Goreng 2L"', '"Sembako & Dapur"', '34000', '"pouch"', '"Tersedia"', '"Minyak kelapa sawit murni"'],
+      ['""', '"Telur Ayam Negeri"', '"Sembako & Dapur"', '28000', '"kg"', '"Tersedia"', '"Telur segar pilihan"'],
+    ];
+    const csvContent = '\uFEFF' + [headers.map((h) => `"${h}"`).join(','), ...sampleRows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'template-impor-produk-warungduniawi.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Submit File CSV Impor Produk ke API
+  const handleImportCsvSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importFile) {
+      alert('Pilih file CSV terlebih dahulu!');
+      return;
+    }
+
+    setImportingCsv(true);
+    setImportResult(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', importFile);
+
+      const res = await fetch('/api/admin/products/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setImportResult(data.message);
+        fetchProducts();
+        setTimeout(() => {
+          setIsImportModalOpen(false);
+          setImportFile(null);
+          setImportResult(null);
+        }, 2500);
+      } else {
+        alert(data.message || 'Gagal mengimpor file CSV.');
+      }
+    } catch {
+      alert('Terjadi kesalahan saat mengunggah file CSV.');
+    } finally {
+      setImportingCsv(false);
+    }
   };
 
 
@@ -1192,7 +1358,7 @@ export default function AdminDashboard() {
                 required
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
-                placeholder="admin@warungduniawi.com"
+                placeholder="nama@email.com"
                 className="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 font-medium"
               />
             </div>
@@ -1206,7 +1372,7 @@ export default function AdminDashboard() {
                 required
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
-                placeholder="Masukkan password"
+                placeholder="••••••••"
                 className="w-full px-4 py-3 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
@@ -1387,23 +1553,6 @@ export default function AdminDashboard() {
                 className="px-3 py-1.5 bg-white border border-stone-200 text-stone-700 rounded-xl text-xs font-bold hover:bg-stone-50 flex items-center gap-1 cursor-pointer shadow-2xs"
               >
                 <RefreshCw className="w-3.5 h-3.5" /> Refresh
-              </button>
-            </div>
-          )}
-          {activeTab === 'products' && (
-            <div className="flex items-center gap-2 mb-2">
-              <button
-                onClick={handleExportProductsCsv}
-                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                title="Ekspor seluruh database produk ke file CSV/Excel"
-              >
-                <Download className="w-3.5 h-3.5 text-blue-600" /> Ekspor Produk (CSV)
-              </button>
-              <button
-                onClick={handleOpenAddProduct}
-                className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer shadow-xs"
-              >
-                <Plus className="w-3.5 h-3.5" /> Tambah Produk
               </button>
             </div>
           )}
@@ -1976,6 +2125,47 @@ export default function AdminDashboard() {
         {/* TAB 3: KELOLA PRODUK & STOK (SUPERADMIN FULL CRUD) */}
         {activeTab === 'products' && (
           <div className="space-y-4">
+            {/* SUB-HEADER AKSI PRODUK (TAMBAH, EKSPOR, IMPOR) */}
+            <div className="bg-white p-4 sm:p-5 rounded-3xl border border-stone-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-black text-stone-900 text-lg flex items-center gap-2">
+                  <Store className="w-5 h-5 text-orange-600" /> Katalog & Stok Produk
+                </h3>
+                <p className="text-xs text-stone-500 mt-0.5">
+                  Total <strong>{products.length} produk</strong> terdaftar di etalase dan kasir toko.
+                </p>
+              </div>
+
+              {/* Action Buttons: Tambah, Ekspor, Impor */}
+              <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+                <button
+                  type="button"
+                  onClick={handleOpenAddProduct}
+                  className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-2xl text-xs font-black flex items-center gap-2 cursor-pointer shadow-md shadow-emerald-700/20 active:scale-95 transition-all"
+                >
+                  <Plus className="w-4 h-4" /> + Tambah Produk Baru
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsImportModalOpen(true)}
+                  className="px-3.5 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-2xl text-xs font-black flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 transition-all"
+                  title="Impor produk massal dari file CSV / Excel"
+                >
+                  <FileUp className="w-4 h-4 text-amber-700" /> Impor (CSV)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportProductsCsv}
+                  className="px-3.5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-2xl text-xs font-black flex items-center gap-2 cursor-pointer shadow-2xs active:scale-95 transition-all"
+                  title="Unduh seluruh database produk ke file CSV / Excel"
+                >
+                  <Download className="w-4 h-4 text-blue-600" /> Ekspor (CSV)
+                </button>
+              </div>
+            </div>
+
             {/* Search & Filter Admin */}
             <div className="bg-white p-4 rounded-2xl border border-stone-200 flex flex-col sm:flex-row gap-3 items-center justify-between">
               <div className="relative w-full sm:w-72">
@@ -2005,12 +2195,73 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* BATCH ACTION BAR (MUNCUL JIKA ADA PRODUK TERPILIH) */}
+            {selectedProductIds.length > 0 && (
+              <div className="bg-amber-500 text-stone-950 p-3.5 px-5 rounded-2xl flex items-center justify-between gap-3 shadow-md animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center gap-2.5 font-black text-xs sm:text-sm">
+                  <span className="w-6 h-6 rounded-full bg-stone-900 text-white flex items-center justify-center text-xs">
+                    {selectedProductIds.length}
+                  </span>
+                  <span>Produk terpilih untuk dihapus</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProductIds([])}
+                    className="px-3 py-1.5 bg-amber-600/50 hover:bg-amber-600 text-stone-950 text-xs font-bold rounded-xl cursor-pointer"
+                  >
+                    Batal Pilih
+                  </button>
+                  <button
+                    type="button"
+                    disabled={batchDeleting}
+                    onClick={handleBatchDeleteProducts}
+                    className="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-black rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95 transition-all"
+                  >
+                    {batchDeleting ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Menghapus...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus {selectedProductIds.length} Produk Terpilih</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* List Table Products */}
             <div className="bg-white rounded-3xl border border-stone-200 shadow-xs overflow-hidden">
-              <div className="p-4 bg-stone-50 border-b border-stone-200 font-extrabold text-xs text-stone-500 uppercase tracking-wider grid grid-cols-12 gap-2">
-                <div className="col-span-5 sm:col-span-4">Nama Produk</div>
+              <div className="p-4 bg-stone-50 border-b border-stone-200 font-extrabold text-xs text-stone-500 uppercase tracking-wider grid grid-cols-12 gap-2 items-center">
+                <div className="col-span-6 sm:col-span-5 flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={
+                      filteredAdminProducts.length > 0 &&
+                      filteredAdminProducts.every((p) => selectedProductIds.includes(p.id))
+                    }
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        const allIds = Array.from(
+                          new Set([...selectedProductIds, ...filteredAdminProducts.map((p) => p.id)])
+                        );
+                        setSelectedProductIds(allIds);
+                      } else {
+                        const filteredIds = new Set(filteredAdminProducts.map((p) => p.id));
+                        setSelectedProductIds(selectedProductIds.filter((id) => !filteredIds.has(id)));
+                      }
+                    }}
+                    className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 cursor-pointer accent-orange-600"
+                    title="Pilih Semua Produk di Tampilan Ini"
+                  />
+                  <span>Nama Produk</span>
+                </div>
                 <div className="col-span-3 sm:col-span-3">Harga</div>
-                <div className="col-span-4 sm:col-span-5 text-right">Stok & Aksi Superadmin</div>
+                <div className="col-span-3 sm:col-span-4 text-right">Stok & Aksi Superadmin</div>
               </div>
 
               <div className="divide-y divide-stone-100">
@@ -2018,29 +2269,43 @@ export default function AdminDashboard() {
                   filteredAdminProducts.map((prod) => (
                     <div
                       key={prod.id}
-                      className="p-4 grid grid-cols-12 gap-2 items-center hover:bg-stone-50/80 transition-colors text-xs sm:text-sm"
+                      className={`p-4 grid grid-cols-12 gap-2 items-center hover:bg-stone-50/80 transition-colors text-xs sm:text-sm ${
+                        selectedProductIds.includes(prod.id) ? 'bg-orange-50/40' : ''
+                      }`}
                     >
-                      <div className="col-span-5 sm:col-span-4 flex items-center gap-3">
+                      <div className="col-span-6 sm:col-span-5 flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedProductIds.includes(prod.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedProductIds((prev) => [...prev, prod.id]);
+                            } else {
+                              setSelectedProductIds((prev) => prev.filter((id) => id !== prod.id));
+                            }
+                          }}
+                          className="w-4 h-4 rounded text-orange-600 focus:ring-orange-500 cursor-pointer accent-orange-600 shrink-0"
+                        />
                         {prod.imageUrl ? (
                           <img
                             src={prod.imageUrl}
                             alt={prod.name}
-                            className="w-10 h-10 rounded-lg object-cover border border-stone-200 hidden sm:block"
+                            className="w-10 h-10 rounded-lg object-cover border border-stone-200 hidden sm:block shrink-0"
                           />
                         ) : (
-                          <div className="w-10 h-10 bg-stone-100 rounded-lg flex items-center justify-center text-sm hidden sm:block">
+                          <div className="w-10 h-10 bg-stone-100 rounded-lg flex items-center justify-center text-sm hidden sm:block shrink-0">
                             📦
                           </div>
                         )}
-                        <div>
-                          <h4 className="font-bold text-stone-900 leading-tight">
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-stone-900 leading-tight truncate">
                             {prod.name}
                           </h4>
                           <span className="text-[10px] text-stone-400 font-medium block">
                             {prod.category.name} ({prod.unit})
                           </span>
                           {prod.barcode && (
-                            <span className="text-[9px] font-mono bg-stone-100 text-stone-600 px-1.5 py-0.2 rounded mt-0.5 inline-block">
+                            <span className="text-[9px] font-mono bg-stone-100 text-stone-600 px-1.5 py-0.2 rounded mt-0.5 inline-block truncate max-w-full">
                               BC: {prod.barcode}
                             </span>
                           )}
@@ -2529,6 +2794,128 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* MODUL 3: KEAMANAN AKUN (UBAH EMAIL & PASSWORD LOGIN) */}
+            <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-4">
+              <div className="flex items-center gap-2.5 border-b border-stone-100 pb-3">
+                <div className="w-10 h-10 rounded-2xl bg-orange-100 text-orange-600 font-black flex items-center justify-center">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-black text-stone-900 text-base leading-tight">
+                    Ubah Email & Password Login
+                  </h4>
+                  <p className="text-[11px] text-stone-500">
+                    Perbarui data akses masuk kasir & superadmin agar warung tetap aman
+                  </p>
+                </div>
+              </div>
+
+              {accountSuccessMsg && (
+                <div className="p-3.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-2xl text-xs font-bold flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{accountSuccessMsg}</span>
+                </div>
+              )}
+
+              {accountErrorMsg && (
+                <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-xs font-bold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{accountErrorMsg}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleUpdateAccountSubmit} className="space-y-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Email Baru */}
+                  <div>
+                    <label className="block font-bold text-stone-700 mb-1 flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-stone-400" /> Email Login Admin
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={newAccountEmail}
+                      onChange={(e) => setNewAccountEmail(e.target.value)}
+                      placeholder="admin@warungduniawi.com"
+                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 focus:bg-white focus:ring-2 focus:ring-orange-500 font-medium"
+                    />
+                    <span className="text-[10px] text-stone-400 mt-0.5 block">
+                      Email saat ini: <strong>{currentAccountEmail || 'Sedang dimuat...'}</strong>
+                    </span>
+                  </div>
+
+                  {/* Password Saat Ini (Wajib Konfirmasi) */}
+                  <div>
+                    <label className="block font-bold text-stone-700 mb-1 flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-orange-600" /> Password Saat Ini *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={currentAccountPassword}
+                      onChange={(e) => setCurrentAccountPassword(e.target.value)}
+                      placeholder="Ketik password lama Anda"
+                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 focus:bg-white focus:ring-2 focus:ring-orange-500"
+                    />
+                    <span className="text-[10px] text-stone-400 mt-0.5 block">
+                      Wajib dimasukkan untuk keamanan perubahan
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1 border-t border-stone-100">
+                  {/* Password Baru (Opsional) */}
+                  <div>
+                    <label className="block font-bold text-stone-700 mb-1 flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-stone-400" /> Password Baru (Opsional)
+                    </label>
+                    <input
+                      type="password"
+                      value={newAccountPassword}
+                      onChange={(e) => setNewAccountPassword(e.target.value)}
+                      placeholder="Kosongkan jika tidak ingin ganti"
+                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 focus:bg-white focus:ring-2 focus:ring-orange-500"
+                    />
+                    <span className="text-[10px] text-stone-400 mt-0.5 block">
+                      Minimal 6 karakter
+                    </span>
+                  </div>
+
+                  {/* Konfirmasi Password Baru */}
+                  <div>
+                    <label className="block font-bold text-stone-700 mb-1 flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-stone-400" /> Ulangi Password Baru
+                    </label>
+                    <input
+                      type="password"
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      placeholder="Ulangi password baru di sini"
+                      disabled={!newAccountPassword}
+                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 focus:bg-white focus:ring-2 focus:ring-orange-500 disabled:opacity-40"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    type="submit"
+                    disabled={savingAccount}
+                    className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-black text-xs rounded-xl shadow-md shadow-orange-600/20 cursor-pointer active:scale-98 flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {savingAccount ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Menyimpan Perubahan...</span>
+                      </>
+                    ) : (
+                      <span>Simpan Perubahan Akun</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+
             {/* PANDUAN HARDWARE SERVER & BIOS RAMAH ORANG RUMAH */}
             <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-3">
               <h4 className="font-black text-stone-900 text-sm flex items-center gap-2">
@@ -2553,23 +2940,31 @@ export default function AdminDashboard() {
         )}
       </main>
 
-      {/* Modal Tambah / Full Edit Produk (Dengan Pilihan Gambar Preset Mudah) */}
+      {/* Modal Tambah / Full Edit Produk (Terkunci di Tengah Layar & Internal Scroll) */}
       {isAddProductOpen && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white max-w-lg w-full p-6 rounded-3xl border border-stone-200 shadow-2xl space-y-4 my-8">
-            <div className="flex justify-between items-center">
-              <h3 className="font-extrabold text-stone-900 text-lg">
-                {editingProduct ? 'Edit Produk Lengkap' : 'Tambah Produk Baru'}
-              </h3>
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white max-w-lg w-full max-h-[90vh] rounded-3xl border border-stone-200 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header (Sticky) */}
+            <div className="flex justify-between items-center p-5 border-b border-stone-100 bg-white">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-black">
+                  <Store className="w-5 h-5" />
+                </div>
+                <h3 className="font-extrabold text-stone-900 text-lg">
+                  {editingProduct ? 'Edit Produk Lengkap' : 'Tambah Produk Baru'}
+                </h3>
+              </div>
               <button
+                type="button"
                 onClick={() => setIsAddProductOpen(false)}
-                className="text-stone-400 hover:text-stone-700 p-1"
+                className="text-stone-400 hover:text-stone-700 p-1.5 rounded-xl hover:bg-stone-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveProductSubmit} className="space-y-3 text-xs">
+            {/* Modal Body (Scrollable Internal) */}
+            <form onSubmit={handleSaveProductSubmit} className="flex-1 overflow-y-auto p-5 space-y-3.5 text-xs">
               <div>
                 <label className="block font-bold text-stone-700 mb-1">
                   Nama Produk *
@@ -2577,10 +2972,11 @@ export default function AdminDashboard() {
                 <input
                   type="text"
                   required
+                  autoFocus
                   value={newProdName}
                   onChange={(e) => setNewProdName(e.target.value)}
                   placeholder="Misal: Beras Pandan Wangi 5kg"
-                  className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900"
+                  className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 focus:bg-white focus:ring-2 focus:ring-orange-500 font-medium"
                 />
               </div>
 
@@ -2704,7 +3100,7 @@ export default function AdminDashboard() {
 
                   {/* Preview Foto */}
                   {newProdImg ? (
-                    <div className="relative w-full h-36 bg-stone-100 rounded-xl overflow-hidden border border-stone-200 flex items-center justify-center group">
+                    <div className="relative w-full h-32 bg-stone-100 rounded-xl overflow-hidden border border-stone-200 flex items-center justify-center group">
                       <img
                         src={newProdImg}
                         alt="Preview Produk"
@@ -2736,17 +3132,18 @@ export default function AdminDashboard() {
                 />
               </div>
 
-              <div className="flex gap-2 pt-3">
+              {/* Modal Footer (Sticky di Bawah) */}
+              <div className="flex gap-2 pt-3 border-t border-stone-100 mt-2">
                 <button
                   type="button"
                   onClick={() => setIsAddProductOpen(false)}
-                  className="w-1/2 py-2.5 bg-stone-100 text-stone-700 rounded-xl font-bold cursor-pointer"
+                  className="w-1/2 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl font-bold cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="w-1/2 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold shadow-md cursor-pointer"
+                  className="w-1/2 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold shadow-md cursor-pointer active:scale-98"
                 >
                   {editingProduct ? 'Simpan Perubahan' : 'Simpan Produk Baru'}
                 </button>
@@ -3073,6 +3470,147 @@ export default function AdminDashboard() {
               Refresh Halaman
             </button>
           )}
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL IMPOR PRODUK MASSAL (CSV / EXCEL) */}
+      {/* ========================================================================= */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white max-w-md w-full rounded-3xl border border-stone-200 shadow-2xl p-6 space-y-5 animate-in fade-in zoom-in-95 duration-150">
+            {/* Header Modal Impor */}
+            <div className="flex justify-between items-center border-b border-stone-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-black">
+                  <FileUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-stone-900 text-base leading-tight">
+                    Impor Produk Massal (CSV)
+                  </h3>
+                  <p className="text-[11px] text-stone-500">
+                    Tambah atau update puluhan produk sekaligus
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  setImportFile(null);
+                  setImportResult(null);
+                }}
+                className="text-stone-400 hover:text-stone-700 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Template Download Card */}
+            <div className="bg-amber-50/70 border border-amber-200 p-3.5 rounded-2xl flex items-center justify-between gap-3 text-xs">
+              <div className="space-y-0.5">
+                <span className="font-bold text-amber-900 block">Belum punya formatnya?</span>
+                <p className="text-[11px] text-amber-700">Unduh contoh template kolom CSV resmi.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleDownloadCsvTemplate}
+                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-black text-xs rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95 shrink-0"
+              >
+                <Download className="w-3.5 h-3.5" /> Template
+              </button>
+            </div>
+
+            {/* Form Upload CSV */}
+            <form onSubmit={handleImportCsvSubmit} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-stone-700 mb-2">
+                  Pilih File CSV Produk (.csv)
+                </label>
+                <label
+                  className={`w-full flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-2xl cursor-pointer transition-all ${
+                    importFile
+                      ? 'border-emerald-400 bg-emerald-50/40 text-emerald-900'
+                      : 'border-stone-300 hover:border-orange-400 bg-stone-50/70 text-stone-600'
+                  }`}
+                >
+                  <FileText className={`w-8 h-8 mb-2 ${importFile ? 'text-emerald-600' : 'text-stone-400'}`} />
+                  {importFile ? (
+                    <div className="text-center space-y-0.5">
+                      <span className="font-bold text-sm text-stone-900 block truncate max-w-[260px]">
+                        {importFile.name}
+                      </span>
+                      <span className="text-[11px] text-stone-500">
+                        ({(importFile.size / 1024).toFixed(1)} KB) • Siap diimpor
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-center space-y-1">
+                      <span className="font-extrabold text-stone-800 text-sm block">
+                        Klik untuk memilih file CSV
+                      </span>
+                      <span className="text-[11px] text-stone-400 block">
+                        Format CSV dengan pemisah koma (,) atau titik koma (;)
+                      </span>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setImportFile(e.target.files[0]);
+                        setImportResult(null);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {/* Hasil Notifikasi Laporan */}
+              {importResult && (
+                <div className="p-3 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-2xl text-xs font-bold flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{importResult}</span>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  disabled={importingCsv}
+                  onClick={() => {
+                    setIsImportModalOpen(false);
+                    setImportFile(null);
+                    setImportResult(null);
+                  }}
+                  className="w-1/3 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-xl cursor-pointer"
+                >
+                  Tutup
+                </button>
+                <button
+                  type="submit"
+                  disabled={importingCsv || !importFile}
+                  className="w-2/3 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-xl shadow-md shadow-amber-600/20 cursor-pointer active:scale-98 flex items-center justify-center gap-2 disabled:opacity-40"
+                >
+                  {importingCsv ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Sedang Mengimpor...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileUp className="w-4 h-4" />
+                      <span>Mulai Impor Produk</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

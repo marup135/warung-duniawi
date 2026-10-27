@@ -94,15 +94,27 @@ export async function PATCH(request: Request) {
   return PUT(request);
 }
 
-// DELETE: Hapus produk dari database (dengan penanganan aman riwayat pesanan)
+// DELETE: Hapus produk tunggal atau massal dari database (dengan penanganan aman riwayat pesanan)
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get('id');
+    const productIdsParam = searchParams.get('ids');
 
-    if (!productId) {
+    let targetIds: string[] = [];
+
+    if (productIdsParam) {
+      targetIds = productIdsParam
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+    } else if (productId) {
+      targetIds = [productId.trim()];
+    }
+
+    if (targetIds.length === 0) {
       return NextResponse.json(
-        { success: false, message: 'ID produk wajib diberikan' },
+        { success: false, message: 'ID produk atau daftar IDs wajib diberikan' },
         { status: 400 }
       );
     }
@@ -110,23 +122,24 @@ export async function DELETE(request: Request) {
     // Gunakan transaction untuk memastikan jika produk sudah pernah dibeli (ada di OrderItem),
     // data referensi OrderItem dibersihkan terlebih dahulu sebelum produk dihapus permanen.
     await prisma.$transaction(async (tx) => {
-      // Hapus riwayat item transaksi yang merujuk ke produk ini
+      // Hapus riwayat item transaksi yang merujuk ke produk-produk ini
       await tx.orderItem.deleteMany({
-        where: { productId },
+        where: { productId: { in: targetIds } },
       });
 
       // Hapus produk
-      await tx.product.delete({
-        where: { id: productId },
+      await tx.product.deleteMany({
+        where: { id: { in: targetIds } },
       });
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Produk beserta riwayat itemnya berhasil dihapus permanen!',
+      message: `${targetIds.length} produk beserta riwayat itemnya berhasil dihapus permanen!`,
+      deletedCount: targetIds.length,
     });
   } catch (error: any) {
-    console.error('Error deleting product:', error);
+    console.error('Error deleting product(s):', error);
     return NextResponse.json(
       { success: false, message: error?.message || 'Gagal menghapus produk' },
       { status: 500 }
