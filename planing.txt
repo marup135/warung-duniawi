@@ -137,6 +137,7 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Kasir cukup scan barang (otomatis masuk keranjang & berbunyi chime/beep)
       * Saat mengetik angka di keyboard (0-9 / Numpad), angka langsung otomatis mengisi kotak "Uang Diterima dari Pembeli" secara real-time
       * Tekan Enter -> Sistem otomatis mengecek barcode / memproses checkout & mencetak struk thermal 58mm/80mm
+      * Tekan Delete -> Otomatis mengosongkan keranjang belanja kasir & mereset total bayar tanpa sentuh mouse (Zero-Mouse Cart Reset)
 
 [x] SPRINT 12: DIRECT PRODUCT IMAGE UPLOAD (HAPUS FOTO PRESET / TEMPLATE) (SELESAI)
     - Migrasi Fitur Foto Produk:

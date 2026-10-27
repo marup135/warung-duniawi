@@ -667,7 +667,17 @@ export default function AdminDashboard() {
         return;
       }
 
-      // 3. TOMBOL 'c' / 'C' / 'Escape' -> RESET INPUT UANG
+      // 3. TOMBOL 'Delete' -> KOSONGKAN KERANJANG KASIR & RESET SEMUA TOTAL
+      if (e.key === 'Delete') {
+        e.preventDefault();
+        barcodeScanBufferRef.current = '';
+        scanBufferRef.current = '';
+        setCashGivenInput('');
+        setPosCart([]);
+        return;
+      }
+
+      // 4. TOMBOL 'c' / 'C' / 'Escape' -> RESET INPUT UANG
       if (e.key === 'c' || e.key === 'C' || e.key === 'Escape') {
         e.preventDefault();
         barcodeScanBufferRef.current = '';
@@ -1537,6 +1547,8 @@ export default function AdminDashboard() {
                     <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">F2</kbd> : + Barang Manual</div>
                     <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">F4</kbd> : Uang Pembeli</div>
                     <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">Space</kbd> : Uang Pas</div>
+                    <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">Delete</kbd> : Kosongkan Keranjang</div>
+                    <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">Esc / C</kbd> : Reset Uang</div>
                     <div>• <kbd className="bg-white px-1.5 py-0.5 border rounded font-mono font-bold text-stone-900 shadow-2xs">Enter</kbd> : Bayar & Struk</div>
                   </div>
                 </div>
