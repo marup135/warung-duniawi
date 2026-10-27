@@ -5,7 +5,7 @@ import Header from '@/components/Header';
 import FilterBar from '@/components/FilterBar';
 import ProductCard, { ProductItem } from '@/components/ProductCard';
 import CartDrawer from '@/components/CartDrawer';
-import { ShoppingBag, Store, Sparkles, PhoneCall, ArrowRight } from 'lucide-react';
+import { ShoppingBag, Store, Sparkles, PhoneCall, ArrowRight, MessageCircle } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -235,14 +235,40 @@ export default function CatalogView() {
             <p className="text-xs text-stone-400 mt-1">
               Mitra Belanja Sembako & Kebutuhan Sehari-hari Keluarga Anda.
             </p>
+            <p className="text-[11px] text-stone-400 mt-0.5">
+              Jl. AMD, Bungurjaya Kec. Pondoksalam, Purwakarta
+            </p>
           </div>
           <div className="flex items-center gap-4 text-xs">
-            <span className="flex items-center gap-1.5 text-stone-400">
-              <PhoneCall className="w-4 h-4 text-orange-500" /> Hubungi Warung: 0812-3456-7890
-            </span>
+            <a
+              href="https://wa.me/6283147599378?text=Halo%20Warung%20Duniawi,%20saya%20mau%20tanya%20pesanan"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-stone-300 hover:text-emerald-400 transition-colors"
+            >
+              <PhoneCall className="w-4 h-4 text-orange-500" /> Hubungi Warung: 0831-4759-9378
+            </a>
           </div>
         </div>
       </footer>
+
+      {/* Floating WhatsApp Action Button */}
+      <a
+        href="https://wa.me/6283147599378?text=Halo%20Warung%20Duniawi,%20saya%20ingin%20memesan%20sembako"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Hubungi WhatsApp Warung Duniawi"
+        className={`fixed z-30 right-4 sm:right-6 flex items-center gap-2.5 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-full shadow-xl shadow-emerald-900/30 transition-all duration-300 hover:scale-105 active:scale-95 group ${
+          totalCartCount > 0 && !isCartOpen ? 'bottom-22' : 'bottom-6'
+        }`}
+      >
+        <span className="relative flex h-3 w-3">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+        </span>
+        <MessageCircle className="w-5 h-5 fill-current" />
+        <span className="hidden sm:inline font-extrabold tracking-wide">Pesan via WhatsApp</span>
+      </a>
     </div>
   );
 }

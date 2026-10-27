@@ -124,11 +124,21 @@ export default function AdminDashboard() {
   const [newBarcodeQty, setNewBarcodeQty] = useState(1);
   const [savingBarcode, setSavingBarcode] = useState(false);
 
-  // Generator Barcode Internal Acak (EAN-13 format internal: prefix 20 + 10 digit unik)
+  // Generator Barcode Internal Acak (Standar EAN-13 resmi: prefix 20 + 10 digit unik + 1 digit checksum)
   const generateInternalBarcode = () => {
-    const timestampPart = Date.now().toString().slice(-8); // 8 digit terakhir timestamp
-    const randomPart = Math.floor(10 + Math.random() * 90); // 2 digit acak
-    return `20${timestampPart}${randomPart}`;
+    // 10 digit data (prefix 20 untuk in-store retail barcode + 8 digit acak/timestamp)
+    const timestampPart = Date.now().toString().slice(-6); // 6 digit
+    const randomPart = Math.floor(1000 + Math.random() * 9000).toString(); // 4 digit
+    const base12 = `20${timestampPart}${randomPart}`; // total 12 digit
+
+    // Hitung Checksum EAN-13 resmi (Modulus 10)
+    let sum = 0;
+    for (let i = 0; i < 12; i++) {
+      const digit = parseInt(base12[i], 10);
+      sum += i % 2 === 0 ? digit : digit * 3;
+    }
+    const checksum = (10 - (sum % 10)) % 10;
+    return `${base12}${checksum}`; // Total 13 digit EAN-13 valid yang langsung dibaca semua scanner
   };
 
   // Buka modal Tambah Barcode Baru

@@ -24,18 +24,41 @@ export default function ThermalBarcode({ items }: ThermalBarcodeProps) {
       const svgEl = svgRefs.current[key];
       if (svgEl && item.barcode) {
         try {
-          JsBarcode(svgEl, item.barcode, {
-            format: 'CODE128',
-            width: 1.8,
-            height: 48,
+          const cleanBarcode = item.barcode.trim();
+          // Jika 13 digit angka murni, gunakan EAN13 resmi. Selain itu gunakan CODE128.
+          const isEAN13 = /^\d{13}$/.test(cleanBarcode);
+
+          JsBarcode(svgEl, cleanBarcode, {
+            format: isEAN13 ? 'EAN13' : 'CODE128',
+            width: 1.5, // Lebar batang tajam dan tidak bleed di kertas 58mm
+            height: 52, // Cukup tinggi agar laser scanner mudah melintang
             displayValue: true,
-            fontSize: 12,
+            fontSize: 11,
             font: 'monospace',
-            textMargin: 2,
-            margin: 0,
+            textMargin: 3,
+            margin: 10, // Memberikan Quiet Zone (area putih kiri-kanan) wajib untuk scanner
+            background: '#ffffff',
+            lineColor: '#000000',
+            flat: true,
           });
         } catch (err) {
-          console.error(`Gagal merender barcode ${item.barcode}:`, err);
+          // Fallback ke CODE128 jika checksum EAN-13 gagal
+          try {
+            JsBarcode(svgEl, item.barcode.trim(), {
+              format: 'CODE128',
+              width: 1.5,
+              height: 52,
+              displayValue: true,
+              fontSize: 11,
+              font: 'monospace',
+              textMargin: 3,
+              margin: 10,
+              background: '#ffffff',
+              lineColor: '#000000',
+            });
+          } catch (fallbackErr) {
+            console.error(`Gagal merender barcode ${item.barcode}:`, fallbackErr);
+          }
         }
       }
     });

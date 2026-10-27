@@ -65,8 +65,8 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
       <div className="text-center font-bold border-b border-black pb-1.5 mb-1.5">
         <div className="text-sm font-black uppercase tracking-wider">WARUNG DUNIAWI</div>
         <div className="text-[10.5px] font-bold">Sembako & Kebutuhan Harian</div>
-        <div className="text-[9.5px] font-normal">Jl. Raya Utama No. 1, Kasir</div>
-        <div className="text-[9.5px] font-normal">WA: 0812-3456-7890</div>
+        <div className="text-[9px] font-normal leading-snug">Jl. AMD, Bungurjaya Kec. Pondoksalam, Purwakarta</div>
+        <div className="text-[9.5px] font-normal">WA: 0831-4759-9378</div>
       </div>
 
       {/* Info Transaksi */}
