@@ -65,3 +65,67 @@ export async function PATCH(request: Request) {
     );
   }
 }
+
+// DELETE: Hapus pesanan per ID atau hapus riwayat pesanan online yang selesai / dibatalkan
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const orderId = searchParams.get('id');
+    const mode = searchParams.get('mode'); // 'single', 'completed_online', 'all_online'
+
+    if (orderId) {
+      // Hapus satu pesanan tertentu
+      await prisma.order.delete({
+        where: { id: orderId },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Pesanan berhasil dihapus dari riwayat!',
+      });
+    }
+
+    if (mode === 'completed_online') {
+      // Hapus semua pesanan online yang sudah COMPLETED atau CANCELLED
+      const result = await prisma.order.deleteMany({
+        where: {
+          orderSource: 'ONLINE_WEB',
+          status: { in: ['COMPLETED', 'CANCELLED'] },
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Berhasil membersihkan ${result.count} riwayat pesanan online yang sudah selesai/dibatalkan!`,
+        count: result.count,
+      });
+    }
+
+    if (mode === 'all_online') {
+      // Hapus semua pesanan online
+      const result = await prisma.order.deleteMany({
+        where: {
+          orderSource: 'ONLINE_WEB',
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Berhasil menghapus seluruh riwayat (${result.count}) pesanan online!`,
+        count: result.count,
+      });
+    }
+
+    return NextResponse.json(
+      { success: false, message: 'Parameter id atau mode wajib diisi' },
+      { status: 400 }
+    );
+  } catch (error: any) {
+    console.error('Error deleting order:', error);
+    return NextResponse.json(
+      { success: false, message: error?.message || 'Gagal menghapus pesanan' },
+      { status: 500 }
+    );
+  }
+}
+

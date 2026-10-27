@@ -180,7 +180,36 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Indikator badge mencolok pesanan [🛵 DIANTAR (KP. Pamundayan 1)] pada dashboard kasir
       * Cetak alamat pengantaran, patokan rumah, dan ongkir pada thermal receipt 58mm/80mm
 
-[ ] SPRINT 15: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
+[x] SPRINT 15: DATA MANAGEMENT & PRODUCT DELETION FIX (SELESAI)
+    - Analisis & Solusi Bug Gagal Hapus Produk:
+      * Masalah: Foreign Key Constraint SQLite (`FOREIGN KEY constraint failed`) pada tabel `OrderItem`.
+      * Solusi: Menggunakan transaksi atomik `prisma.$transaction` di `/api/admin/products` untuk membersihkan relasi `orderItem` terkait sebelum produk dihapus permanen, sehingga tidak lagi memicu galat foreign key constraint.
+    - Fitur Hapus Riwayat Pesanan Online (Order History Management):
+      * Endpoint API DELETE `/api/admin/orders`:
+        - Hapus pesanan tunggal berdasarkan `id`
+        - Hapus massal (mode: `completed_online` untuk pesanan berstatus Selesai/Batal, dan `all_online` untuk seluruh riwayat)
+      * UI di Dashboard Admin:
+        - Tombol "Bersihkan Riwayat Selesai" di header tab Pesanan Web Online
+        - Tombol hapus satuan (ikon tong sampah merah) pada kartu pesanan yang sudah selesai (COMPLETED)
+    - Fitur Ekspor Database Semua Produk (Export Catalog):
+      * Endpoint API GET `/api/admin/products/export`:
+        - Menghasilkan file CSV berformat UTF-8 dengan BOM (kompatibel penuh dengan Microsoft Excel & Google Sheets)
+        - Mencakup seluruh data produk (Barcode, Nama, Kategori, Harga, Satuan, Status Stok, Deskripsi, URL Foto, Tanggal Input)
+      * UI di Tab Produk Admin:
+        - Tombol "📥 Ekspor Produk (CSV)" di samping tombol Tambah Produk
+    - Fitur Generator & Cetak Label Barcode In-House (Khusus Telur / Terigu / Barang Curah):
+      * Format Barcode Internal: Prefix standar in-house retail `20` + timestamp + random digit (Code 128 / EAN-13 ready)
+      * Tab Menu Baru Admin "Cetak Barcode Produk":
+        - Pilih barang sembako curah & deteksi otomatis produk yang belum punya barcode (bisa klik 1 tombol langsung generate)
+        - Pengaturan jumlah cetak stiker/label (1, 5, 10, 20 lembar atau custom)
+        - Antrean cetak fleksibel (bisa gabung beberapa barang sekaligus)
+      * Komponen Cetak ThermalBarcode:
+        - Format visual siap cetak ke printer thermal 58mm/80mm (Header toko, nama barang, harga jumbo, barcode SVG tajam & garis potong putus-putus)
+        - Tombol auto-generate barcode cepat pada modal tambah/edit produk
+
+
+
+[ ] SPRINT 16: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
     - Manajemen Shift Kasir (Buka & Tutup Kasir):
       * Input Modal Awal Kas Kecil saat kasir mulai buka toko (misal: Rp 100.000)
       * Pencatatan kas keluar manual (misal: beli es batu, bayar sampah, kembalian darurat)
@@ -192,7 +221,7 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Filter rentang waktu analitik: Hari Ini, Kemarin, 7 Hari Terakhir, Bulan Ini
       * Breakdown metode bayar: Tunai vs QRIS vs Transfer
 
-[ ] SPRINT 16: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
+[ ] SPRINT 17: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
     - Manajemen Kuantitas Stok Riil:
       * Mengubah status stok dari sekadar boolean (Ada/Habis) menjadi angka kuantitas riil (`stockQuantity`)
       * Pengurangan stok otomatis setiap ada transaksi kasir POS atau pesanan online masuk

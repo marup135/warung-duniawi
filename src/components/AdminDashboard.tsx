@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import ThermalReceipt from '@/components/ThermalReceipt';
+import ThermalBarcode from '@/components/ThermalBarcode';
 import {
   Store,
   Bell,
@@ -31,6 +32,8 @@ import {
   Upload,
   Image as ImageIcon,
   Loader2,
+  Download,
+  Sparkles,
 } from 'lucide-react';
 
 interface OrderItem {
@@ -100,7 +103,22 @@ export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
-  const [activeTab, setActiveTab] = useState<'orders' | 'pos' | 'products' | 'categories'>('pos');
+  const [activeTab, setActiveTab] = useState<'orders' | 'pos' | 'products' | 'categories' | 'barcodes'>('pos');
+
+  // Barcode Label Print State
+  const [barcodePrintList, setBarcodePrintList] = useState<{ product: Product; count: number }[]>([]);
+  const [selectedBarcodeProduct, setSelectedBarcodeProduct] = useState<string>('');
+  const [barcodeLabelQty, setBarcodeLabelQty] = useState<number>(1);
+  const [printableBarcodeItems, setPrintableBarcodeItems] = useState<
+    { id: string; name: string; barcode: string; price: number; unit: string }[]
+  >([]);
+
+  // Generator Barcode Internal Acak (EAN-13 format internal: prefix 20 + 10 digit unik)
+  const generateInternalBarcode = () => {
+    const timestampPart = Date.now().toString().slice(-8); // 8 digit terakhir timestamp
+    const randomPart = Math.floor(10 + Math.random() * 90); // 2 digit acak
+    return `20${timestampPart}${randomPart}`;
+  };
 
   // Orders State
   const [orders, setOrders] = useState<Order[]>([]);
@@ -772,7 +790,7 @@ export default function AdminDashboard() {
 
   // Hapus Produk dari Database
   const handleDeleteProduct = async (productId: string, productName: string) => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus produk "${productName}" dari database?`)) {
+    if (!confirm(`Apakah Anda yakin ingin menghapus produk "${productName}" dari database? Jika produk pernah ada di riwayat transaksi kasir/online, data item transaksinya akan ikut dibersihkan.`)) {
       return;
     }
 
@@ -782,6 +800,7 @@ export default function AdminDashboard() {
       });
       const json = await res.json();
       if (json.success) {
+        alert(json.message || 'Produk berhasil dihapus!');
         fetchProducts();
       } else {
         alert(json.message);
@@ -790,6 +809,59 @@ export default function AdminDashboard() {
       alert('Gagal menghapus produk.');
     }
   };
+
+  // Hapus Pesanan Satuan (Online Web)
+  const handleDeleteSingleOrder = async (orderId: string, orderNumber: string) => {
+    if (!confirm(`Hapus pesanan "${orderNumber}" dari riwayat pesanan?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/orders?id=${orderId}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (json.success) {
+        fetchOrders();
+      } else {
+        alert(json.message);
+      }
+    } catch (err) {
+      alert('Gagal menghapus pesanan.');
+    }
+  };
+
+  // Bersihkan Riwayat Pesanan Online (Completed & Cancelled)
+  const handleClearOnlineOrders = async (mode: 'completed_online' | 'all_online') => {
+    const promptText = mode === 'completed_online'
+      ? 'Hapus semua pesanan online yang statusnya sudah SELESAI / BATAL?'
+      : 'PERINGATAN: Apakah Anda yakin ingin menghapus SELURUH riwayat pesanan web online?';
+
+    if (!confirm(promptText)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/orders?mode=${mode}`, {
+        method: 'DELETE',
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert(json.message);
+        fetchOrders();
+      } else {
+        alert(json.message);
+      }
+    } catch (err) {
+      alert('Gagal membersihkan riwayat pesanan.');
+    }
+  };
+
+  // Download / Ekspor Database Seluruh Produk ke File CSV
+  const handleExportProductsCsv = () => {
+    window.open('/api/admin/products/export', '_blank');
+  };
+
 
   // Tambah Kategori Baru
   const handleAddCategorySubmit = async (e: React.FormEvent) => {
@@ -1104,23 +1176,52 @@ export default function AdminDashboard() {
             >
               <Tag className="w-4 h-4" /> Kategori Warung
             </button>
+
+            <button
+              onClick={() => setActiveTab('barcodes')}
+              className={`pb-3 text-sm font-extrabold cursor-pointer border-b-2 flex items-center gap-2 whitespace-nowrap px-2 ${
+                activeTab === 'barcodes'
+                  ? 'border-orange-600 text-orange-600'
+                  : 'border-transparent text-stone-500 hover:text-stone-800'
+              }`}
+            >
+              <Barcode className="w-4 h-4 text-orange-600" /> Cetak Barcode Produk
+            </button>
           </div>
 
           {activeTab === 'orders' && (
-            <button
-              onClick={fetchOrders}
-              className="mb-2 px-3 py-1.5 bg-white border border-stone-200 text-stone-700 rounded-xl text-xs font-bold hover:bg-stone-50 flex items-center gap-1 cursor-pointer shadow-2xs"
-            >
-              <RefreshCw className="w-3.5 h-3.5" /> Refresh
-            </button>
+            <div className="flex items-center gap-2 mb-2">
+              <button
+                onClick={() => handleClearOnlineOrders('completed_online')}
+                className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title="Hapus semua pesanan online yang sudah Selesai atau Batal"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-red-600" /> Bersihkan Riwayat Selesai
+              </button>
+              <button
+                onClick={fetchOrders}
+                className="px-3 py-1.5 bg-white border border-stone-200 text-stone-700 rounded-xl text-xs font-bold hover:bg-stone-50 flex items-center gap-1 cursor-pointer shadow-2xs"
+              >
+                <RefreshCw className="w-3.5 h-3.5" /> Refresh
+              </button>
+            </div>
           )}
           {activeTab === 'products' && (
-            <button
-              onClick={handleOpenAddProduct}
-              className="mb-2 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer shadow-xs"
-            >
-              <Plus className="w-3.5 h-3.5" /> Tambah Produk
-            </button>
+            <div className="flex items-center gap-2 mb-2">
+              <button
+                onClick={handleExportProductsCsv}
+                className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                title="Ekspor seluruh database produk ke file CSV/Excel"
+              >
+                <Download className="w-3.5 h-3.5 text-blue-600" /> Ekspor Produk (CSV)
+              </button>
+              <button
+                onClick={handleOpenAddProduct}
+                className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer shadow-xs"
+              >
+                <Plus className="w-3.5 h-3.5" /> Tambah Produk
+              </button>
+            </div>
           )}
         </div>
 
@@ -1648,6 +1749,16 @@ export default function AdminDashboard() {
                               Selesai
                             </button>
                           )}
+
+                          {isCompleted && (
+                            <button
+                              onClick={() => handleDeleteSingleOrder(order.id, order.orderNumber)}
+                              className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl cursor-pointer border border-red-200 shadow-2xs"
+                              title="Hapus Pesanan Ini dari Riwayat"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1909,6 +2020,286 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* ========================================================================= */}
+        {/* TAB 5: GENERATE & CETAK LABEL BARCODE (UNTUK BARANG NON-BARCODE SEPERTI TELUR/TERIGU) */}
+        {/* ========================================================================= */}
+        {activeTab === 'barcodes' && (
+          <div className="space-y-6">
+            {/* Header Deskripsi Tab */}
+            <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-6 rounded-3xl border border-orange-200">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h3 className="font-black text-stone-900 text-lg flex items-center gap-2">
+                    <Barcode className="w-6 h-6 text-orange-600" /> Cetak Label Barcode Toko
+                  </h3>
+                  <p className="text-xs text-stone-600 mt-1 max-w-2xl leading-relaxed">
+                    Khusus untuk barang eceran/curah yang tidak memiliki barcode kemasan dari pabrik (misal: <strong>Telur 1kg, Terigu Curah, Minyak Literan, Gula Pasir</strong>). Label dicetak rapi dan tajam langsung ke printer thermal 58mm/80mm agar bisa di-scan kasir dalam hitungan detik.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* KOLOM KIRI: FORM PILIH BARANG & JUMLAH CETAK */}
+              <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-4">
+                <h4 className="font-extrabold text-stone-900 text-sm flex items-center gap-2 border-b border-stone-100 pb-3">
+                  <Plus className="w-4 h-4 text-orange-600" /> Tambah Produk ke Antrean Cetak
+                </h4>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 mb-1">
+                      PILIH PRODUK *
+                    </label>
+                    <select
+                      value={selectedBarcodeProduct}
+                      onChange={(e) => setSelectedBarcodeProduct(e.target.value)}
+                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 text-xs font-bold focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                    >
+                      <option value="">-- Pilih Barang yang Akan Dicetak --</option>
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({p.barcode ? `Barcode: ${p.barcode}` : '⚠️ Belum Ada Barcode'}) - {formatRupiah(p.price)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Keterangan Jika Produk Belum Punya Barcode */}
+                  {selectedBarcodeProduct && (() => {
+                    const chosen = products.find((p) => p.id === selectedBarcodeProduct);
+                    if (chosen && !chosen.barcode) {
+                      return (
+                        <div className="p-3 bg-amber-50 border border-amber-300 rounded-2xl space-y-2">
+                          <p className="text-xs text-amber-900 font-bold flex items-center gap-1.5">
+                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" /> Produk ini belum memiliki barcode!
+                          </p>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const autoCode = generateInternalBarcode();
+                              try {
+                                const res = await fetch('/api/admin/products', {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    productId: chosen.id,
+                                    barcode: autoCode,
+                                  }),
+                                });
+                                const json = await res.json();
+                                if (json.success) {
+                                  alert(`Berhasil membuat barcode internal: ${autoCode}`);
+                                  fetchProducts();
+                                } else {
+                                  alert(json.message);
+                                }
+                              } catch (e) {
+                                alert('Gagal membuat barcode otomatis.');
+                              }
+                            }}
+                            className="w-full py-2 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center justify-center gap-1"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" /> Buat Barcode Otomatis Sekarang
+                          </button>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 mb-1">
+                      JUMLAH LABEL YANG AKAN DICETAK (PCS)
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center border border-stone-300 rounded-xl bg-stone-50 overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => setBarcodeLabelQty((q) => Math.max(1, q - 1))}
+                          className="px-3 py-2 text-stone-600 hover:bg-stone-200 cursor-pointer font-black"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          value={barcodeLabelQty}
+                          onChange={(e) => setBarcodeLabelQty(Math.max(1, Number(e.target.value) || 1))}
+                          className="w-16 text-center font-black text-stone-900 text-sm bg-transparent focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setBarcodeLabelQty((q) => q + 1)}
+                          className="px-3 py-2 text-stone-600 hover:bg-stone-200 cursor-pointer font-black"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <div className="flex gap-1.5">
+                        {[1, 5, 10, 20].map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => setBarcodeLabelQty(preset)}
+                            className="px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-lg cursor-pointer"
+                          >
+                            {preset}x
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!selectedBarcodeProduct) {
+                        alert('Silakan pilih produk terlebih dahulu!');
+                        return;
+                      }
+                      const chosen = products.find((p) => p.id === selectedBarcodeProduct);
+                      if (!chosen) return;
+                      if (!chosen.barcode) {
+                        alert('Produk ini belum memiliki barcode. Silakan klik tombol "Buat Barcode Otomatis" di atas terlebih dahulu!');
+                        return;
+                      }
+
+                      setBarcodePrintList((prev) => {
+                        const existingIdx = prev.findIndex((item) => item.product.id === chosen.id);
+                        if (existingIdx >= 0) {
+                          const updated = [...prev];
+                          updated[existingIdx].count += barcodeLabelQty;
+                          return updated;
+                        }
+                        return [...prev, { product: chosen, count: barcodeLabelQty }];
+                      });
+
+                      setSelectedBarcodeProduct('');
+                      setBarcodeLabelQty(1);
+                    }}
+                    className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <Plus className="w-4 h-4" /> Masukkan ke Daftar Cetak
+                  </button>
+                </div>
+              </div>
+
+              {/* KOLOM KANAN: DAFTAR ANTREAN CETAK & TOMBOL ACTION CETAK THERMAL */}
+              <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                  <div>
+                    <h4 className="font-extrabold text-stone-900 text-sm flex items-center gap-2">
+                      <Printer className="w-4 h-4 text-orange-600" /> Antrean Cetak Label ({barcodePrintList.reduce((a, b) => a + b.count, 0)} Total Stiker)
+                    </h4>
+                  </div>
+                  {barcodePrintList.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setBarcodePrintList([])}
+                      className="text-xs text-red-600 hover:text-red-700 font-bold cursor-pointer"
+                    >
+                      Kosongkan Antrean
+                    </button>
+                  )}
+                </div>
+
+                {barcodePrintList.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="divide-y divide-stone-100 border border-stone-100 rounded-2xl overflow-hidden">
+                      {barcodePrintList.map(({ product, count }, idx) => (
+                        <div key={product.id} className="p-3 flex items-center justify-between hover:bg-stone-50">
+                          <div>
+                            <h5 className="font-bold text-stone-900 text-xs">{product.name}</h5>
+                            <div className="text-[11px] text-stone-500 font-mono">
+                              Kode: <strong className="text-stone-800">{product.barcode}</strong> | {formatRupiah(product.price)} / {product.unit}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <span className="bg-orange-100 text-orange-800 font-extrabold text-xs px-2.5 py-1 rounded-full">
+                              {count} lembar
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setBarcodePrintList((prev) => prev.filter((_, i) => i !== idx));
+                              }}
+                              className="p-1 text-stone-400 hover:text-red-600 cursor-pointer"
+                              title="Hapus dari antrean"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Tombol Cetak ke Printer Thermal */}
+                    <div className="p-4 bg-orange-50/60 rounded-2xl border border-orange-200 space-y-2">
+                      <div className="flex justify-between items-center text-xs font-bold text-stone-700">
+                        <span>Total Label Siap Cetak:</span>
+                        <span className="font-black text-orange-700 text-sm">
+                          {barcodePrintList.reduce((a, b) => a + b.count, 0)} Label
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const flatItems: { id: string; name: string; barcode: string; price: number; unit: string }[] = [];
+                          barcodePrintList.forEach(({ product, count }) => {
+                            if (product.barcode) {
+                              for (let i = 0; i < count; i++) {
+                                flatItems.push({
+                                  id: product.id,
+                                  name: product.name,
+                                  barcode: product.barcode,
+                                  price: product.price,
+                                  unit: product.unit,
+                                });
+                              }
+                            }
+                          });
+
+                          if (flatItems.length === 0) {
+                            alert('Tidak ada barcode yang valid untuk dicetak!');
+                            return;
+                          }
+
+                          // Matikan struk pesanan kasir yang mungkin tersimpan agar tidak ikut tercetak
+                          setSelectedPrintOrder(null);
+                          setPrintableBarcodeItems(flatItems);
+
+                          setTimeout(() => {
+                            window.print();
+                          }, 300);
+                        }}
+                        className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-black text-sm rounded-xl shadow-md shadow-orange-600/20 cursor-pointer active:scale-98 flex items-center justify-center gap-2"
+                      >
+                        <Printer className="w-5 h-5" /> Cetak Label ke Printer Thermal 58mm/80mm
+                      </button>
+                      <p className="text-[11px] text-stone-500 text-center italic">
+                        Label akan tercetak bersusun dengan garis potong putus-putus.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-stone-400">
+                    <div className="text-4xl mb-2">🏷️</div>
+                    <p className="text-xs font-bold text-stone-600">Antrean cetak barcode masih kosong.</p>
+                    <p className="text-[11px] text-stone-400 mt-1">
+                      Pilih produk sembako di sebelah kiri dan klik &quot;Masukkan ke Daftar Cetak&quot;.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Modal Tambah / Full Edit Produk (Dengan Pilihan Gambar Preset Mudah) */}
@@ -1963,9 +2354,19 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-stone-700 mb-1">
-                    Kode Barcode (Opsional)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-bold text-stone-700">
+                      Kode Barcode
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setNewProdBarcode(generateInternalBarcode())}
+                      className="text-[10px] font-black text-orange-600 hover:text-orange-700 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200 cursor-pointer flex items-center gap-1"
+                      title="Buat barcode internal otomatis untuk telur/terigu/beras curah"
+                    >
+                      <Sparkles className="w-3 h-3" /> Auto
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={newProdBarcode}
@@ -2106,6 +2507,9 @@ export default function AdminDashboard() {
 
       {/* Komponen Cetak Struk Kasir Thermal */}
       <ThermalReceipt order={selectedPrintOrder} />
+
+      {/* Komponen Cetak Label Barcode Thermal */}
+      <ThermalBarcode items={printableBarcodeItems} />
     </div>
   );
 }

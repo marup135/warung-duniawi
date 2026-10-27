@@ -94,7 +94,7 @@ export async function PATCH(request: Request) {
   return PUT(request);
 }
 
-// DELETE: Hapus produk dari database
+// DELETE: Hapus produk dari database (dengan penanganan aman riwayat pesanan)
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -107,18 +107,28 @@ export async function DELETE(request: Request) {
       );
     }
 
-    await prisma.product.delete({
-      where: { id: productId },
+    // Gunakan transaction untuk memastikan jika produk sudah pernah dibeli (ada di OrderItem),
+    // data referensi OrderItem dibersihkan terlebih dahulu sebelum produk dihapus permanen.
+    await prisma.$transaction(async (tx) => {
+      // Hapus riwayat item transaksi yang merujuk ke produk ini
+      await tx.orderItem.deleteMany({
+        where: { productId },
+      });
+
+      // Hapus produk
+      await tx.product.delete({
+        where: { id: productId },
+      });
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Produk berhasil dihapus!',
+      message: 'Produk beserta riwayat itemnya berhasil dihapus permanen!',
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting product:', error);
     return NextResponse.json(
-      { success: false, message: 'Gagal menghapus produk' },
+      { success: false, message: error?.message || 'Gagal menghapus produk' },
       { status: 500 }
     );
   }

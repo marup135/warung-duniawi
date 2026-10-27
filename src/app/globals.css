@@ -73,13 +73,26 @@ body {
     clear: both !important;
   }
 
-  /* Sembunyikan semua elemen selain struk */
+  /* Sembunyikan semua elemen selain struk dan label barcode */
   body * {
     visibility: hidden;
   }
 
-  .struk-kasir, .struk-kasir * {
+  .struk-kasir, .struk-kasir *,
+  .barcode-print-container, .barcode-print-container * {
     visibility: visible;
+  }
+
+  .barcode-print-container {
+    display: block !important;
+    width: 46mm !important;
+    max-width: 46mm !important;
+    box-sizing: border-box !important;
+    margin-left: 4.5mm !important;
+    margin-right: auto !important;
+    margin-top: 0 !important;
+    padding-top: 4mm !important;
+    padding-bottom: 4mm !important;
   }
 
   /* Sembunyikan elemen antarmuka kasir lainnya */
