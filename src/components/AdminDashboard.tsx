@@ -112,6 +112,7 @@ export default function AdminDashboard() {
   const [printableBarcodeItems, setPrintableBarcodeItems] = useState<
     { id: string; name: string; barcode: string; price: number; unit: string }[]
   >([]);
+  const [activePrintMode, setActivePrintMode] = useState<'receipt' | 'barcode' | null>(null);
 
   // Modal Tambah Barcode Baru State
   const [isAddBarcodeOpen, setIsAddBarcodeOpen] = useState(false);
@@ -369,11 +370,23 @@ export default function AdminDashboard() {
     }
   };
 
-  // Trigger Print Receipt
+  // Trigger Print Receipt Struk Kasir
   const handlePrintReceipt = (order: Order) => {
+    // 1. Isolasi total: mode cetak struk kasir & kosongkan barcode
+    setActivePrintMode('receipt');
+    setPrintableBarcodeItems([]);
     setSelectedPrintOrder(order);
-    // Beri waktu 250ms agar React selesai mount / render komponen ThermalReceipt ke DOM
+
+    // 2. Beri waktu 250ms agar React selesai render komponen ThermalReceipt ke DOM
     setTimeout(() => {
+      // Pasang listener pembersih setelah print selesai/batal
+      const cleanupAfterPrint = () => {
+        setSelectedPrintOrder(null);
+        setActivePrintMode(null);
+        window.removeEventListener('afterprint', cleanupAfterPrint);
+      };
+      window.addEventListener('afterprint', cleanupAfterPrint);
+
       window.print();
     }, 250);
   };
@@ -2121,6 +2134,7 @@ export default function AdminDashboard() {
                             type="button"
                             onClick={() => {
                               // Cetak 1 Lembar Cepat
+                              setActivePrintMode('barcode');
                               setSelectedPrintOrder(null);
                               setPrintableBarcodeItems([
                                 {
@@ -2132,6 +2146,12 @@ export default function AdminDashboard() {
                                 },
                               ]);
                               setTimeout(() => {
+                                const cleanup = () => {
+                                  setPrintableBarcodeItems([]);
+                                  setActivePrintMode(null);
+                                  window.removeEventListener('afterprint', cleanup);
+                                };
+                                window.addEventListener('afterprint', cleanup);
                                 window.print();
                               }, 300);
                             }}
@@ -2157,9 +2177,16 @@ export default function AdminDashboard() {
                                     unit: item.unit,
                                   });
                                 }
+                                setActivePrintMode('barcode');
                                 setSelectedPrintOrder(null);
                                 setPrintableBarcodeItems(list);
                                 setTimeout(() => {
+                                  const cleanup = () => {
+                                    setPrintableBarcodeItems([]);
+                                    setActivePrintMode(null);
+                                    window.removeEventListener('afterprint', cleanup);
+                                  };
+                                  window.addEventListener('afterprint', cleanup);
                                   window.print();
                                 }, 300);
                               }
@@ -2459,11 +2486,18 @@ export default function AdminDashboard() {
                       });
                     }
 
+                    setActivePrintMode('barcode');
                     setSelectedPrintOrder(null);
                     setPrintableBarcodeItems(listToPrint);
 
                     // Beri jeda 300ms agar DOM selesai render lalu langsung print
                     setTimeout(() => {
+                      const cleanup = () => {
+                        setPrintableBarcodeItems([]);
+                        setActivePrintMode(null);
+                        window.removeEventListener('afterprint', cleanup);
+                      };
+                      window.addEventListener('afterprint', cleanup);
                       window.print();
                     }, 300);
                   } else {
@@ -2600,11 +2634,15 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Komponen Cetak Struk Kasir Thermal */}
-      <ThermalReceipt order={selectedPrintOrder} />
+      {/* Komponen Cetak Struk Kasir Thermal (HANYA dirender jika activePrintMode === 'receipt' dan order ada) */}
+      {activePrintMode === 'receipt' && selectedPrintOrder && (
+        <ThermalReceipt order={selectedPrintOrder} />
+      )}
 
-      {/* Komponen Cetak Label Barcode Thermal */}
-      <ThermalBarcode items={printableBarcodeItems} />
+      {/* Komponen Cetak Label Barcode Thermal (HANYA dirender jika activePrintMode === 'barcode' dan items ada) */}
+      {activePrintMode === 'barcode' && printableBarcodeItems.length > 0 && (
+        <ThermalBarcode items={printableBarcodeItems} />
+      )}
     </div>
   );
 }
