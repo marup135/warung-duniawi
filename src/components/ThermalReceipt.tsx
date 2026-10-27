@@ -59,26 +59,28 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
   return (
     <div
       id="printable-receipt"
-      className="struk-kasir struk-container hidden print:block text-black font-mono text-[11px] font-bold leading-normal"
+      className="struk-kasir struk-container hidden print:block text-black font-mono text-[11px] font-bold leading-tight"
     >
-      {/* Baris kosong pemisah agar teks toko tidak kena pisau pemotong */}
-      <div style={{ height: '14px' }}></div>
+      {/* Top Safety Buffer: Ruang kosong agar tidak terinjak oleh karakter inisialisasi printer fisik */}
+      <div style={{ height: '32px' }}></div>
 
       {/* Header Struk */}
       <div className="text-center font-bold border-b border-black pb-2 mb-2">
-        <div className="text-base font-black uppercase tracking-wider">WARUNG DUNIAWI</div>
+        <div className="text-sm font-black uppercase tracking-wider">WARUNG DUNIAWI</div>
         <div className="text-[11px] font-bold">Sembako & Kebutuhan Harian</div>
         <div className="text-[10px] font-normal">Jl. Raya Utama No. 1, Kasir</div>
         <div className="text-[10px] font-normal">WA: 0812-3456-7890</div>
       </div>
 
       {/* Info Transaksi */}
-      <div className="border-b border-black pb-1.5 mb-1.5 text-[11px] space-y-0.5">
-        <div className="flex justify-between font-bold">
-          <span>{order.orderNumber}</span>
+      <div className="border-b border-black pb-1.5 mb-1.5 text-[10.5px] space-y-0.5">
+        <div className="flex justify-between font-black border-b border-dotted border-black/40 pb-0.5">
+          <span>NO: {order.orderNumber}</span>
           <span>{formattedDate}</span>
         </div>
-        <div className="truncate font-bold">PELANGGAN: {order.customerName.toUpperCase()}</div>
+        <div className="truncate font-bold pt-0.5">
+          PELANGGAN: {order.customerName.toUpperCase()}
+        </div>
         {order.customerPhone && order.customerPhone !== '-' && (
           <div>NO WA: {order.customerPhone}</div>
         )}
@@ -90,53 +92,53 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
             : 'AMBIL DI WARUNG'}
         </div>
         {order.pickupMethod === 'DELIVERY' && order.deliveryAddress && (
-          <div className="font-bold border-t border-dashed border-black pt-1 mt-1 text-[10.5px]">
+          <div className="font-bold border-t border-dashed border-black pt-1 mt-1 text-[10px]">
             ALAMAT: {order.deliveryAddress.toUpperCase()}
           </div>
         )}
       </div>
 
-      {/* List Items */}
-      <div className="border-b border-black pb-1.5 mb-1.5 space-y-1">
+      {/* List Items (Rata Kiri & Kanan Presisi) */}
+      <div className="border-b border-black pb-1.5 mb-1.5 space-y-1.5">
         {order.items.map((item) => (
-          <div key={item.id} className="text-[11.5px]">
-            <div className="font-bold">{item.product.name}</div>
-            <div className="flex justify-between pl-1 text-[11px]">
-              <span>
+          <div key={item.id} className="text-[11px]">
+            <div className="font-bold truncate">{item.product.name}</div>
+            <div className="flex justify-between items-center text-[10.5px]">
+              <span className="text-stone-800">
                 {item.quantity} x {formatRupiah(item.price)}
               </span>
-              <span className="font-bold">{formatRupiah(item.subtotal)}</span>
+              <span className="font-black text-right">{formatRupiah(item.subtotal)}</span>
             </div>
           </div>
         ))}
       </div>
 
       {/* Ringkasan Bayar & Kembalian */}
-      <div className="space-y-0.5 text-[12px]">
+      <div className="space-y-0.5 text-[11px]">
         {order.shippingFee !== undefined && order.shippingFee !== null && order.shippingFee > 0 && (
-          <div className="flex justify-between text-[11px]">
+          <div className="flex justify-between">
             <span>ONGKIR:</span>
-            <span>{formatRupiah(order.shippingFee)}</span>
+            <span className="font-bold">{formatRupiah(order.shippingFee)}</span>
           </div>
         )}
-        <div className="flex justify-between font-black text-sm pt-1 border-t border-dashed border-black">
+        <div className="flex justify-between font-black text-xs pt-1 border-t border-dashed border-black">
           <span>TOTAL:</span>
           <span>{formatRupiah(order.totalAmount)}</span>
         </div>
 
         {isPosOffline && order.amountPaid ? (
           <>
-            <div className="flex justify-between text-[11px] pt-0.5">
+            <div className="flex justify-between pt-0.5">
               <span>BAYAR:</span>
-              <span>{formatRupiah(order.amountPaid)}</span>
+              <span className="font-bold">{formatRupiah(order.amountPaid)}</span>
             </div>
-            <div className="flex justify-between text-[11px] font-bold">
+            <div className="flex justify-between font-black">
               <span>KEMBALIAN:</span>
               <span>{formatRupiah(order.changeAmount || 0)}</span>
             </div>
           </>
         ) : (
-          <div className="flex justify-between text-[11px] pt-0.5">
+          <div className="flex justify-between pt-0.5">
             <span>BAYAR:</span>
             <span className="font-bold">QRIS / TUNAI</span>
           </div>
@@ -150,14 +152,14 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
       )}
 
       {/* Footer Struk */}
-      <div className="text-center mt-3 pt-2 border-t border-black text-[10px] font-medium">
+      <div className="text-center mt-3 pt-2 border-t border-black text-[10px] font-medium leading-normal">
         <div>*** TERIMA KASIH ***</div>
         <div>Selamat Belanja Kembali di</div>
-        <div className="font-bold text-[11px]">Warung Duniawi</div>
+        <div className="font-black text-[11px]">Warung Duniawi</div>
       </div>
 
-      {/* Baris kosong penutup di paling bawah */}
-      <div style={{ height: '18px' }}></div>
+      {/* Bottom Feed Buffer: Menjauhkan teks dari pisau pemotong struk */}
+      <div style={{ height: '24px' }}></div>
     </div>
   );
 }

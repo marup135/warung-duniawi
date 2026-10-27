@@ -36,22 +36,22 @@ body {
 
   .struk-kasir {
     display: block !important;
-    /* Lebar aman kertas 58mm */
-    width: 46mm !important;
-    max-width: 46mm !important;
+    /* Lebar presisi roll 58mm (head cetak efektif 48mm) */
+    width: 48mm !important;
+    max-width: 48mm !important;
     box-sizing: border-box !important;
 
-    /* Geser kontainer 4.5mm ke kanan agar TOTAL/BAYAR/KEMBALIAN utuh tidak terpotong */
-    margin-left: 4.5mm !important;
+    /* Posisi simetris di tengah (center) roll kertas 58mm */
+    margin-left: 2.5mm !important;
     margin-right: auto !important;
     margin-top: 0 !important;
     margin-bottom: 0 !important;
 
     /* Ruang aman atas dan bawah */
-    padding-top: 8mm !important;
-    padding-bottom: 6mm !important;
-    padding-left: 1mm !important;
-    padding-right: 1mm !important;
+    padding-top: 10mm !important;
+    padding-bottom: 8mm !important;
+    padding-left: 0.5mm !important;
+    padding-right: 0.5mm !important;
 
     font-family: 'Courier New', Courier, monospace !important;
     font-size: 11px !important;

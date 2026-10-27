@@ -209,7 +209,20 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
 
 
 
-[ ] SPRINT 16: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
+[x] SPRINT 16: THERMAL RECEIPT PRECISION & PRINT CLEANUP (SELESAI)
+    - Eliminasi Karakter Aneh Driver & Pencegahan Teks Terpotong di Atas:
+      * Masalah: Header grafis raster/banner CUPS PPD Linux diterjemahkan menjadi teks sampah acak oleh firmware printer WOYA WP58D dan menimpa teks toko.
+      * Solusi Frontend: Menambahkan *top safety feed buffer* (`height: 32px`) pada `ThermalReceipt.tsx` agar teks toko tidak pernah bertabrakan dengan sisa karakter inisialisasi printer fisik.
+      * Solusi Sistem: Menghilangkan banner job-sheets pada CUPS server (`sudo lpadmin -p ThermalPrinter -o job-sheets-default=none,none`).
+    - Penyesuaian Presisi Simetris Kiri-Kanan (Margin & Width 58mm):
+      * Menyesuaikan `margin-left: 2.5mm !important;` di `@media print` (`globals.css`) agar posisi struk simetris pas di tengah kertas.
+      * Menyesuaikan lebar efektif `width: 48mm !important;` (lebar efektif head printer 58mm) dengan padding seimbang `0.5mm` agar tidak berat sebelah.
+    - Perbaikan Layout Baris Nomor Order & Tanggal:
+      * Menata baris nomor pesanan unik (`NO: #WD-261027-XXX`) dan tanggal di atas garis dotted agar tidak patah/terpotong menjadi dua baris.
+      * Format perincian belanja (qty x harga vs subtotal) dibuat rata kiri-kanan presisi yang lurus vertikal.
+
+
+[ ] SPRINT 17: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
     - Manajemen Shift Kasir (Buka & Tutup Kasir):
       * Input Modal Awal Kas Kecil saat kasir mulai buka toko (misal: Rp 100.000)
       * Pencatatan kas keluar manual (misal: beli es batu, bayar sampah, kembalian darurat)
@@ -221,7 +234,7 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Filter rentang waktu analitik: Hari Ini, Kemarin, 7 Hari Terakhir, Bulan Ini
       * Breakdown metode bayar: Tunai vs QRIS vs Transfer
 
-[ ] SPRINT 17: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
+[ ] SPRINT 18: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
     - Manajemen Kuantitas Stok Riil:
       * Mengubah status stok dari sekadar boolean (Ada/Habis) menjadi angka kuantitas riil (`stockQuantity`)
       * Pengurangan stok otomatis setiap ada transaksi kasir POS atau pesanan online masuk
