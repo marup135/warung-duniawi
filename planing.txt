@@ -223,7 +223,27 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Format perincian belanja (qty x harga vs subtotal) dibuat rata kiri-kanan presisi yang lurus vertikal.
 
 
-[ ] SPRINT 17: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
+[x] SPRINT 17: KIOSK DEVICE SETTINGS & HARDWARE CONTROL (KECERAHAN & SAFE SHUTDOWN) (SELESAI)
+    - Tab Menu Baru "⚙️ Pengaturan & Kios" di Dashboard Kasir (/kasir-447):
+      * Desain UI ramah keluarga/kasir dengan ikon besar & tata letak bersih.
+    - Kontrol Kecerahan Layar Kiosk (Web Display Brightness):
+      * Slider responsif pengatur kecerahan (30% - 100%) dengan live CSS overlay/filter.
+      * Tombol preset cepat 1-klik:
+        - ☀️ Siang Hari (100% - Terang maksimal)
+        - ⛅ Sore / Lampu Warung (75% - Seimbang)
+        - 🌙 Malam Hari (50% - Redup tidak silau)
+      * Penyimpanan otomatis tingkat kecerahan ke localStorage agar tidak reset saat browser refresh.
+    - Manajemen Daya Server Kiosk Aman (Safe Shutdown & Restart):
+      * Tombol "Matikan Komputer Kasir (Shutdown)" berwarna merah mencolok dengan dialog konfirmasi aman.
+      * Tombol "Mulai Ulang Sistem (Restart)" untuk refresh sistem tanpa perlu cabut stopkontak.
+      * Backend API: `/api/admin/system/power` dengan parameter action (`shutdown` / `reboot`).
+      * Integrasi eksekusi host Ubuntu via DBus / Systemd / Helper signal file di shared data volume.
+      * Layar visual penutup: "Komputer Sedang Dimatikan dengan Aman. Silakan matikan saklar listrik setelah layar mati (5-10 detik)."
+    - Panduan Operasional Hardware Kiosk (Deployment & BIOS):
+      * Dokumentasi setup Auto Power-On di BIOS (Restore on AC/Power Loss).
+      * Dokumentasi konfigurasi tombol fisik power untuk 1-klik safe shutdown (/etc/systemd/logind.conf).
+
+[ ] SPRINT 18: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
     - Manajemen Shift Kasir (Buka & Tutup Kasir):
       * Input Modal Awal Kas Kecil saat kasir mulai buka toko (misal: Rp 100.000)
       * Pencatatan kas keluar manual (misal: beli es batu, bayar sampah, kembalian darurat)
@@ -235,7 +255,7 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Filter rentang waktu analitik: Hari Ini, Kemarin, 7 Hari Terakhir, Bulan Ini
       * Breakdown metode bayar: Tunai vs QRIS vs Transfer
 
-[ ] SPRINT 18: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
+[ ] SPRINT 19: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
     - Manajemen Kuantitas Stok Riil:
       * Mengubah status stok dari sekadar boolean (Ada/Habis) menjadi angka kuantitas riil (`stockQuantity`)
       * Pengurangan stok otomatis setiap ada transaksi kasir POS atau pesanan online masuk

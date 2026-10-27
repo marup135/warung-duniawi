@@ -74,5 +74,29 @@ Lalu aktifkan site & reload Nginx:
 Jalankan certbot untuk mendapatkan HTTPS resmi:
    sudo certbot --nginx -d warungduniawi.com -d www.warungduniawi.com
 
+--------------------------------------------------------------------------------
+5. SETUP HARDWARE KIOSK: AUTO POWER-ON & 1-KLIK SHUTDOWN
+--------------------------------------------------------------------------------
+
+A. Menghidupkan Otomatis (Auto Power-On):
+   - Masuk BIOS komputer kasir (tekan F2/Del saat baru dinyalakan).
+   - Cari menu "Power Management" -> ubah "Restore on AC/Power Loss" menjadi "Power On".
+   - Sekarang, cukup nyalakan saklar stopkontak listrik toko, PC langsung hidup otomatis.
+
+B. 1-Klik Tombol Power Fisik Casing (Safe Shutdown):
+   - Di terminal Ubuntu host, buka config logind:
+     sudo nano /etc/systemd/logind.conf
+   - Pastikan berisi:
+     HandlePowerKey=poweroff
+     PowerKeyIgnoreInhibited=yes
+   - Restart service:
+     sudo systemctl restart systemd-logind
+
+C. Background Shutdown Watcher (Mendengarkan Tombol Matikan dari Web Kasir):
+   - Sistem web menulis file signal saat tombol "Matikan Komputer" diklik ke volume Docker.
+   - Di host Ubuntu, buat cron/systemd ringan untuk mengeksekusi shutdown:
+     Tambahkan di crontab host (`sudo crontab -e`):
+     * * * * * if [ -f /var/lib/docker/volumes/warungduniawi_sqlite_data/_data/power.flag ]; then rm -f /var/lib/docker/volumes/warungduniawi_sqlite_data/_data/power.flag && /sbin/shutdown -h now; fi
+
 Selamat! Website Warung Duniawi kini aktif di https://warungduniawi.com !
 ==============================================================================

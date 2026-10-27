@@ -34,6 +34,13 @@ import {
   Loader2,
   Download,
   Sparkles,
+  Settings,
+  Sun,
+  Moon,
+  Power,
+  RotateCw,
+  Monitor,
+  ShieldAlert,
 } from 'lucide-react';
 
 interface OrderItem {
@@ -103,7 +110,62 @@ export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
-  const [activeTab, setActiveTab] = useState<'orders' | 'pos' | 'products' | 'categories' | 'barcodes'>('pos');
+  const [activeTab, setActiveTab] = useState<'orders' | 'pos' | 'products' | 'categories' | 'barcodes' | 'settings'>('pos');
+
+  // Kiosk Brightness & Hardware Settings State
+  const [screenBrightness, setScreenBrightness] = useState<number>(100);
+  const [powerActionModal, setPowerActionModal] = useState<'shutdown' | 'reboot' | null>(null);
+  const [powerExecuting, setPowerExecuting] = useState(false);
+  const [powerExecutedState, setPowerExecutedState] = useState<'shutdown' | 'reboot' | null>(null);
+
+  // Inisialisasi Kecerahan Layar dari localStorage
+  useEffect(() => {
+    try {
+      const savedBrightness = localStorage.getItem('wd_kiosk_brightness');
+      if (savedBrightness) {
+        const val = Number(savedBrightness);
+        if (val >= 30 && val <= 100) {
+          setScreenBrightness(val);
+        }
+      }
+    } catch {
+      // localStorage fallback
+    }
+  }, []);
+
+  // Update kecerahan layar & simpan ke localStorage
+  const handleUpdateBrightness = (val: number) => {
+    const clamped = Math.min(100, Math.max(30, val));
+    setScreenBrightness(clamped);
+    try {
+      localStorage.setItem('wd_kiosk_brightness', String(clamped));
+    } catch {
+      // fallback
+    }
+  };
+
+  // Eksekusi Daya (Shutdown / Reboot)
+  const handleExecutePowerAction = async (action: 'shutdown' | 'reboot') => {
+    setPowerExecuting(true);
+    try {
+      const res = await fetch('/api/admin/system/power', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setPowerExecutedState(action);
+        setPowerActionModal(null);
+      } else {
+        alert(data.error || 'Gagal mengirim sinyal ke sistem host.');
+      }
+    } catch {
+      alert('Koneksi terputus atau gagal menghubungi server.');
+    } finally {
+      setPowerExecuting(false);
+    }
+  };
 
   // Barcode Label Print State
   const [barcodePrintList, setBarcodePrintList] = useState<{ product: Product; count: number }[]>([]);
@@ -1174,7 +1236,12 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] text-stone-900 font-sans pb-16">
+    <div
+      className="min-h-screen bg-[#FAF8F5] text-stone-900 font-sans pb-16 transition-[filter] duration-200"
+      style={{
+        filter: screenBrightness < 100 ? `brightness(${screenBrightness}%)` : undefined,
+      }}
+    >
       {/* Top Navbar Dashboard */}
       <header className="sticky top-0 z-30 bg-stone-900 text-white px-4 py-3 shadow-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -1292,6 +1359,17 @@ export default function AdminDashboard() {
               }`}
             >
               <Barcode className="w-4 h-4 text-orange-600" /> Cetak Barcode Produk
+            </button>
+
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`pb-3 text-sm font-extrabold cursor-pointer border-b-2 flex items-center gap-2 whitespace-nowrap px-2 ${
+                activeTab === 'settings'
+                  ? 'border-orange-600 text-orange-600'
+                  : 'border-transparent text-stone-500 hover:text-stone-800'
+              }`}
+            >
+              <Settings className="w-4 h-4 text-stone-600" /> Pengaturan & Kios
             </button>
           </div>
 
@@ -2278,6 +2356,201 @@ export default function AdminDashboard() {
             </div>
           </div>
         )}
+
+        {/* ========================================================================= */}
+        {/* TAB 6: PENGATURAN KIOSK & SISTEM HARDWARE (KECERAHAN & DAYA SERVER) */}
+        {/* ========================================================================= */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6 max-w-4xl">
+            {/* Header Pengaturan Kios */}
+            <div className="bg-gradient-to-r from-stone-800 to-stone-900 text-white p-6 rounded-3xl border border-stone-700 shadow-md flex items-center justify-between gap-4">
+              <div className="space-y-1">
+                <h3 className="font-black text-xl flex items-center gap-2.5">
+                  <Monitor className="w-6 h-6 text-orange-400" /> Pengaturan Layar & Komputer Kasir
+                </h3>
+                <p className="text-xs text-stone-300 max-w-xl leading-relaxed">
+                  Pusat kendali kenyamanan layar kasir dan manajemen daya komputer warung (Ubuntu Kiosk Server).
+                </p>
+              </div>
+              <div className="hidden sm:flex items-center gap-2 bg-stone-800/80 px-3.5 py-2 rounded-2xl border border-stone-700 text-xs font-bold text-stone-300">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Kiosk Online</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* MODUL 1: KONTROL KECERAHAN LAYAR */}
+              <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-5">
+                <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 font-black flex items-center justify-center">
+                      <Sun className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-stone-900 text-base leading-tight">
+                        Kecerahan Layar Kios
+                      </h4>
+                      <p className="text-[11px] text-stone-500">
+                        Atur redup/terang agar mata tidak lelah
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-lg font-black text-amber-600 bg-amber-50 px-3 py-1 rounded-xl border border-amber-200">
+                    {screenBrightness}%
+                  </span>
+                </div>
+
+                {/* Slider Kecerahan */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-bold text-stone-500">
+                    <span className="flex items-center gap-1"><Moon className="w-3.5 h-3.5 text-stone-400" /> Redup (30%)</span>
+                    <span className="flex items-center gap-1"><Sun className="w-3.5 h-3.5 text-amber-500" /> Terang (100%)</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={30}
+                    max={100}
+                    step={5}
+                    value={screenBrightness}
+                    onChange={(e) => handleUpdateBrightness(Number(e.target.value))}
+                    className="w-full h-3 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-orange-600"
+                  />
+                </div>
+
+                {/* Tombol Preset Cepat */}
+                <div className="space-y-2 pt-1">
+                  <label className="block text-xs font-black uppercase text-stone-400 tracking-wider">
+                    Pilihan Cepat (1-Klik):
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateBrightness(100)}
+                      className={`p-3 rounded-2xl border text-center font-bold text-xs cursor-pointer transition-all ${
+                        screenBrightness === 100
+                          ? 'bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/20'
+                          : 'bg-stone-50 hover:bg-stone-100 text-stone-800 border-stone-200'
+                      }`}
+                    >
+                      <Sun className="w-5 h-5 mx-auto mb-1 text-amber-400" />
+                      <span className="block font-black text-xs">Siang Hari</span>
+                      <span className="text-[10px] opacity-80">100% Terang</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateBrightness(75)}
+                      className={`p-3 rounded-2xl border text-center font-bold text-xs cursor-pointer transition-all ${
+                        screenBrightness === 75
+                          ? 'bg-orange-500 text-white border-orange-500 shadow-md shadow-orange-500/20'
+                          : 'bg-stone-50 hover:bg-stone-100 text-stone-800 border-stone-200'
+                      }`}
+                    >
+                      <Sun className="w-5 h-5 mx-auto mb-1 text-orange-400" />
+                      <span className="block font-black text-xs">Sore / Lampu</span>
+                      <span className="text-[10px] opacity-80">75% Nyaman</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateBrightness(50)}
+                      className={`p-3 rounded-2xl border text-center font-bold text-xs cursor-pointer transition-all ${
+                        screenBrightness === 50
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20'
+                          : 'bg-stone-50 hover:bg-stone-100 text-stone-800 border-stone-200'
+                      }`}
+                    >
+                      <Moon className="w-5 h-5 mx-auto mb-1 text-indigo-300" />
+                      <span className="block font-black text-xs">Malam Hari</span>
+                      <span className="text-[10px] opacity-80">50% Redup</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-stone-50 p-3 rounded-2xl border border-stone-200 text-[11px] text-stone-500 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Kecerahan ini otomatis tersimpan di memori browser perangkat kasir.</span>
+                </div>
+              </div>
+
+              {/* MODUL 2: MANAJEMEN DAYA SERVER KOMPUTER KASIR */}
+              <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-5 flex flex-col justify-between">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2.5 border-b border-stone-100 pb-3">
+                    <div className="w-10 h-10 rounded-2xl bg-red-100 text-red-700 font-black flex items-center justify-center">
+                      <Power className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-stone-900 text-base leading-tight">
+                        Kendali Daya Server Kasir
+                      </h4>
+                      <p className="text-[11px] text-stone-500">
+                        Matikan komputer dengan aman saat toko tutup
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-stone-600 leading-relaxed">
+                    Jangan langsung mencabut stopkontak atau saklar listrik saat komputer masih aktif agar database pesanan dan data warung tidak rusak. Gunakan tombol di bawah ini:
+                  </p>
+
+                  <div className="space-y-3 pt-1">
+                    {/* Tombol Shutdown */}
+                    <button
+                      type="button"
+                      onClick={() => setPowerActionModal('shutdown')}
+                      className="w-full py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-sm shadow-md shadow-red-600/20 flex items-center justify-center gap-2.5 cursor-pointer active:scale-98 transition-all"
+                    >
+                      <Power className="w-5 h-5" />
+                      <span>MATIKAN KOMPUTER KASIR (SHUTDOWN)</span>
+                    </button>
+
+                    {/* Tombol Reboot */}
+                    <button
+                      type="button"
+                      onClick={() => setPowerActionModal('reboot')}
+                      className="w-full py-3 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-2xl font-bold text-xs border border-stone-300 flex items-center justify-center gap-2 cursor-pointer active:scale-98 transition-all"
+                    >
+                      <RotateCw className="w-4 h-4 text-stone-600" />
+                      <span>Mulai Ulang Sistem (Restart / Reboot)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 p-3 rounded-2xl border border-amber-200 text-[11px] text-amber-900 space-y-1">
+                  <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                    <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0" />
+                    <span>Petunjuk Mematikan Komputer:</span>
+                  </div>
+                  <p className="leading-snug">
+                    Setelah tombol &quot;Matikan Komputer&quot; diklik, tunggu 5-10 detik sampai lampu monitor atau CPU mati, lalu saklar stopkontak warung boleh dimatikan.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* PANDUAN HARDWARE SERVER & BIOS RAMAH ORANG RUMAH */}
+            <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-3">
+              <h4 className="font-black text-stone-900 text-sm flex items-center gap-2">
+                💡 Tips Praktis untuk Orang Rumah / Kasir Warung
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-stone-600">
+                <div className="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 space-y-1">
+                  <span className="font-bold text-stone-900 block">⚡ Menghidupkan Otomatis (Auto Power-On):</span>
+                  <p className="leading-relaxed">
+                    Di BIOS komputer (tekan F2/Del saat baru nyala), aktifkan menu <em>&quot;Restore on AC/Power Loss: Power On&quot;</em>. Cukup nyalakan saklar stopkontak listrik toko di pagi hari, komputer kasir akan langsung menyala sendiri tanpa perlu cari tombol power kecil di casing.
+                  </p>
+                </div>
+                <div className="bg-stone-50 p-3.5 rounded-2xl border border-stone-200 space-y-1">
+                  <span className="font-bold text-stone-900 block">🔌 Tombol Power Fisik Casing:</span>
+                  <p className="leading-relaxed">
+                    Sistem Ubuntu kasir telah diatur agar saat tombol power casing ditekan 1x (tekan pendek), komputer akan langsung memproses shutdown aman otomatis layaknya mematikan TV.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Modal Tambah / Full Edit Produk (Dengan Pilihan Gambar Preset Mudah) */}
@@ -2710,6 +2983,97 @@ export default function AdminDashboard() {
       {/* Komponen Cetak Label Barcode Thermal (HANYA dirender jika activePrintMode === 'barcode' dan items ada) */}
       {activePrintMode === 'barcode' && printableBarcodeItems.length > 0 && (
         <ThermalBarcode items={printableBarcodeItems} />
+      )}
+      {/* ========================================================================= */}
+      {/* MODAL KONFIRMASI DAYA (SHUTDOWN / REBOOT) */}
+      {/* ========================================================================= */}
+      {powerActionModal && (
+        <div className="fixed inset-0 z-50 bg-stone-900/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white max-w-sm w-full p-6 rounded-3xl border-2 border-red-500 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-100">
+            <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+              <Power className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="font-black text-stone-900 text-lg">
+                {powerActionModal === 'shutdown'
+                  ? 'Matikan Komputer Kasir?'
+                  : 'Mulai Ulang (Restart) Komputer?'}
+              </h3>
+              <p className="text-xs text-stone-500 leading-relaxed">
+                {powerActionModal === 'shutdown'
+                  ? 'Pastikan semua transaksi kasir hari ini sudah selesai sebelum mematikan sistem.'
+                  : 'Sistem komputer kasir akan direstart dan kembali menyala dalam 1-2 menit.'}
+              </p>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                disabled={powerExecuting}
+                onClick={() => setPowerActionModal(null)}
+                className="w-1/2 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-xl text-xs cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={powerExecuting}
+                onClick={() => handleExecutePowerAction(powerActionModal)}
+                className="w-1/2 py-3 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl text-xs shadow-md shadow-red-600/20 cursor-pointer active:scale-98 flex items-center justify-center gap-1.5"
+              >
+                {powerExecuting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Memproses...</span>
+                  </>
+                ) : (
+                  <span>Ya, {powerActionModal === 'shutdown' ? 'Matikan Sekarang' : 'Restart'}</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SCREEN PENUTUP SISTEM SAAT SHUTDOWN SEDANG BERJALAN */}
+      {/* ========================================================================= */}
+      {powerExecutedState && (
+        <div className="fixed inset-0 z-50 bg-stone-950 text-white flex flex-col items-center justify-center p-6 text-center space-y-5 animate-in fade-in duration-300">
+          <div className="w-16 h-16 rounded-3xl bg-red-600/20 text-red-400 border border-red-500/30 flex items-center justify-center">
+            <Power className="w-8 h-8 animate-pulse text-red-500" />
+          </div>
+
+          <div className="space-y-2 max-w-md">
+            <h2 className="text-2xl font-black tracking-tight">
+              {powerExecutedState === 'shutdown'
+                ? 'Sistem Sedang Dimatikan dengan Aman'
+                : 'Sistem Sedang Memulai Ulang (Restart)'}
+            </h2>
+            <p className="text-stone-400 text-sm leading-relaxed">
+              {powerExecutedState === 'shutdown' ? (
+                <>
+                  Database dan aplikasi sedang ditutup dengan rapi.
+                  <span className="block mt-2 font-bold text-amber-400">
+                    Tunggu 5-10 detik sampai lampu monitor atau PC mati, lalu saklar listrik boleh dimatikan.
+                  </span>
+                </>
+              ) : (
+                'Komputer kasir sedang restart. Halaman ini akan otomatis kembali aktif setelah sistem siap.'
+              )}
+            </p>
+          </div>
+
+          {powerExecutedState === 'reboot' && (
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-stone-800 hover:bg-stone-700 border border-stone-600 rounded-xl text-xs font-bold text-stone-200 cursor-pointer"
+            >
+              Refresh Halaman
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
