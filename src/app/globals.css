@@ -21,7 +21,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Gaya cetak thermal printer 58mm (WOYA WP58D Standard Text) */
 @media print {
   @page {
     size: 58mm auto;
@@ -37,20 +36,41 @@ body {
 
   .struk-kasir {
     display: block !important;
-    width: 48mm !important;
-    max-width: 48mm !important;
-    margin-left: 2.5mm !important;
+    /* Lebar aman kertas 58mm */
+    width: 46mm !important;
+    max-width: 46mm !important;
+    box-sizing: border-box !important;
+
+    /* Geser kontainer 4.5mm ke kanan agar TOTAL/BAYAR/KEMBALIAN utuh tidak terpotong */
+    margin-left: 4.5mm !important;
     margin-right: auto !important;
     margin-top: 0 !important;
-    padding: 0 1mm !important;
-    box-sizing: border-box !important;
-    font-family: monospace, 'Courier New', Courier !important;
+    margin-bottom: 0 !important;
+
+    /* Ruang aman atas dan bawah */
+    padding-top: 8mm !important;
+    padding-bottom: 6mm !important;
+    padding-left: 1mm !important;
+    padding-right: 1mm !important;
+
+    font-family: 'Courier New', Courier, monospace !important;
     font-size: 11px !important;
-    font-weight: bold !important;
+    font-weight: 600 !important;
     line-height: 1.3 !important;
+    letter-spacing: -0.2px !important;
     color: #000000 !important;
+
+    /* Cegah duplikasi atau halaman ke-2 */
+    page-break-inside: avoid !important;
     page-break-after: avoid !important;
     break-after: avoid !important;
+  }
+
+  /* Cegah teks menimpa satu sama lain */
+  .struk-kasir .row,
+  .struk-kasir table {
+    width: 100% !important;
+    clear: both !important;
   }
 
   /* Sembunyikan semua elemen selain struk */
@@ -62,6 +82,7 @@ body {
     visibility: visible;
   }
 
+  /* Sembunyikan elemen antarmuka kasir lainnya */
   .no-print, header, nav, button, footer, aside {
     display: none !important;
   }
