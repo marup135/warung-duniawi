@@ -125,18 +125,23 @@ export default function AdminDashboard() {
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [selectedPrintOrder, setSelectedPrintOrder] = useState<Order | null>(null);
-  const [autoPrintEnabled, setAutoPrintEnabled] = useState(false);
-  const autoPrintEnabledRef = useRef<boolean>(false);
+  const [autoPrintEnabled, setAutoPrintEnabled] = useState(true);
+  const autoPrintEnabledRef = useRef<boolean>(true);
   const previousOrderCountRef = useRef<number>(0);
   const printedOrderIdsRef = useRef<Set<string>>(new Set());
 
-  // Load status Auto-Print dari localStorage saat mount
+  // Load status Auto-Print dari localStorage saat mount (Default: AKTIF)
   useEffect(() => {
     const savedAutoPrint = localStorage.getItem('wd_auto_print_enabled');
     if (savedAutoPrint !== null) {
       const isEnabled = savedAutoPrint === 'true';
       setAutoPrintEnabled(isEnabled);
       autoPrintEnabledRef.current = isEnabled;
+    } else {
+      // Default jika belum pernah diset: langsung aktifkan auto-print
+      setAutoPrintEnabled(true);
+      autoPrintEnabledRef.current = true;
+      localStorage.setItem('wd_auto_print_enabled', 'true');
     }
   }, []);
 
@@ -363,21 +368,23 @@ export default function AdminDashboard() {
         const currentPending = fetchedOrders.filter((o) => o.status === 'PENDING').length;
         setPendingCount(currentPending);
 
-        // Deteksi pesanan baru yang masuk
+        // Deteksi pesanan baru yang belum pernah dicatat/dicetak
         if (previousOrderCountRef.current === 0) {
-          // Saat pertama kali buka dashboard, catat ID yang sudah ada agar tidak mencetak riwayat lama
+          // Saat pertama kali dashboard dibuka: catat semua order yang sudah ada
           fetchedOrders.forEach((o) => printedOrderIdsRef.current.add(o.id));
-        } else if (fetchedOrders.length > previousOrderCountRef.current) {
-          playChimeSound();
-
-          // Cari pesanan baru yang belum pernah dicetak otomatis
+        } else {
+          // Cari pesanan baru yang belum tercatat di printedOrderIdsRef
           const newOrders = fetchedOrders.filter((o) => !printedOrderIdsRef.current.has(o.id));
           if (newOrders.length > 0) {
+            playChimeSound();
+
             newOrders.forEach((o) => printedOrderIdsRef.current.add(o.id));
-            if (autoPrintEnabledRef.current) {
-              console.log('[Auto-Print] Mencetak pesanan online baru:', newOrders[0].orderNumber);
-              // Cetak pesanan online terbaru
-              handlePrintReceipt(newOrders[0]);
+
+            // Jika Auto-Print AKTIF, cetak otomatis pesanan baru yang berstatus PENDING
+            const pendingNewOrders = newOrders.filter((o) => o.status === 'PENDING');
+            if (pendingNewOrders.length > 0 && autoPrintEnabledRef.current) {
+              console.log('[Auto-Print] Mencetak pesanan baru otomatis:', pendingNewOrders[0].orderNumber);
+              handlePrintReceipt(pendingNewOrders[0]);
             }
           }
         }

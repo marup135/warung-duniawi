@@ -86,33 +86,45 @@ export async function DELETE(request: Request) {
     }
 
     if (mode === 'completed_online') {
-      // Hapus semua pesanan online yang sudah COMPLETED atau CANCELLED
-      const result = await prisma.order.deleteMany({
+      // Hapus semua pesanan yang sudah COMPLETED atau CANCELLED
+      // Gunakan transaksi untuk membersihkan relasi OrderItem terlebih dahulu
+      const ordersToDelete = await prisma.order.findMany({
         where: {
-          orderSource: 'ONLINE_WEB',
           status: { in: ['COMPLETED', 'CANCELLED'] },
         },
+        select: { id: true },
       });
+
+      const orderIds = ordersToDelete.map((o) => o.id);
+
+      if (orderIds.length > 0) {
+        await prisma.$transaction(async (tx) => {
+          await tx.orderItem.deleteMany({
+            where: { orderId: { in: orderIds } },
+          });
+          await tx.order.deleteMany({
+            where: { id: { in: orderIds } },
+          });
+        });
+      }
 
       return NextResponse.json({
         success: true,
-        message: `Berhasil membersihkan ${result.count} riwayat pesanan online yang sudah selesai/dibatalkan!`,
-        count: result.count,
+        message: `Berhasil membersihkan ${orderIds.length} riwayat pesanan yang sudah selesai/dibatalkan!`,
+        count: orderIds.length,
       });
     }
 
     if (mode === 'all_online') {
-      // Hapus semua pesanan online
-      const result = await prisma.order.deleteMany({
-        where: {
-          orderSource: 'ONLINE_WEB',
-        },
+      // Hapus seluruh pesanan
+      await prisma.$transaction(async (tx) => {
+        await tx.orderItem.deleteMany({});
+        await tx.order.deleteMany({});
       });
 
       return NextResponse.json({
         success: true,
-        message: `Berhasil menghapus seluruh riwayat (${result.count}) pesanan online!`,
-        count: result.count,
+        message: `Berhasil menghapus seluruh riwayat pesanan!`,
       });
     }
 

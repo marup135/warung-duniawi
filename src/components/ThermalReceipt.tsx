@@ -61,22 +61,20 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
       id="printable-receipt"
       className="struk-kasir struk-container hidden print:block text-black font-mono text-[11px] font-bold leading-tight"
     >
-      {/* Top Safety Buffer: Ruang kosong agar tidak terinjak oleh karakter inisialisasi printer fisik */}
-      <div style={{ height: '32px' }}></div>
-
-      {/* Header Struk */}
-      <div className="text-center font-bold border-b border-black pb-2 mb-2">
+      {/* Header Struk Langsung Mulai (Tanpa Buffer Kosong yang Boros Kertas) */}
+      <div className="text-center font-bold border-b border-black pb-1.5 mb-1.5">
         <div className="text-sm font-black uppercase tracking-wider">WARUNG DUNIAWI</div>
-        <div className="text-[11px] font-bold">Sembako & Kebutuhan Harian</div>
-        <div className="text-[10px] font-normal">Jl. Raya Utama No. 1, Kasir</div>
-        <div className="text-[10px] font-normal">WA: 0812-3456-7890</div>
+        <div className="text-[10.5px] font-bold">Sembako & Kebutuhan Harian</div>
+        <div className="text-[9.5px] font-normal">Jl. Raya Utama No. 1, Kasir</div>
+        <div className="text-[9.5px] font-normal">WA: 0812-3456-7890</div>
       </div>
 
       {/* Info Transaksi */}
-      <div className="border-b border-black pb-1.5 mb-1.5 text-[10.5px] space-y-0.5">
-        <div className="flex justify-between font-black border-b border-dotted border-black/40 pb-0.5">
-          <span>NO: {order.orderNumber}</span>
-          <span>{formattedDate}</span>
+      <div className="border-b border-black pb-1 mb-1 text-[10px] space-y-0.5">
+        {/* Nomor Order dan Tanggal Dipisah Baris Agar Tidak Patah */}
+        <div className="flex justify-between items-center font-black">
+          <span>{order.orderNumber}</span>
+          <span className="font-normal text-[9.5px]">{formattedDate}</span>
         </div>
         <div className="truncate font-bold pt-0.5">
           PELANGGAN: {order.customerName.toUpperCase()}
@@ -92,18 +90,18 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
             : 'AMBIL DI WARUNG'}
         </div>
         {order.pickupMethod === 'DELIVERY' && order.deliveryAddress && (
-          <div className="font-bold border-t border-dashed border-black pt-1 mt-1 text-[10px]">
+          <div className="font-bold border-t border-dashed border-black pt-1 mt-0.5 text-[9.5px]">
             ALAMAT: {order.deliveryAddress.toUpperCase()}
           </div>
         )}
       </div>
 
       {/* List Items (Rata Kiri & Kanan Presisi) */}
-      <div className="border-b border-black pb-1.5 mb-1.5 space-y-1.5">
+      <div className="border-b border-black pb-1 mb-1 space-y-1">
         {order.items.map((item) => (
-          <div key={item.id} className="text-[11px]">
+          <div key={item.id} className="text-[10.5px]">
             <div className="font-bold truncate">{item.product.name}</div>
-            <div className="flex justify-between items-center text-[10.5px]">
+            <div className="flex justify-between items-center text-[10px]">
               <span className="text-stone-800">
                 {item.quantity} x {formatRupiah(item.price)}
               </span>
@@ -114,7 +112,7 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
       </div>
 
       {/* Ringkasan Bayar & Kembalian */}
-      <div className="space-y-0.5 text-[11px]">
+      <div className="space-y-0.5 text-[10.5px]">
         {order.shippingFee !== undefined && order.shippingFee !== null && order.shippingFee > 0 && (
           <div className="flex justify-between">
             <span>ONGKIR:</span>
@@ -146,20 +144,20 @@ export default function ThermalReceipt({ order }: ThermalReceiptProps) {
       </div>
 
       {order.notes && (
-        <div className="mt-2 text-[10px] italic border-t border-black pt-1">
+        <div className="mt-1.5 text-[9.5px] italic border-t border-black pt-1">
           Ket: {order.notes}
         </div>
       )}
 
       {/* Footer Struk */}
-      <div className="text-center mt-3 pt-2 border-t border-black text-[10px] font-medium leading-normal">
+      <div className="text-center mt-2 pt-1.5 border-t border-black text-[9.5px] font-medium leading-normal">
         <div>*** TERIMA KASIH ***</div>
         <div>Selamat Belanja Kembali di</div>
-        <div className="font-black text-[11px]">Warung Duniawi</div>
+        <div className="font-black text-[10.5px]">Warung Duniawi</div>
       </div>
 
-      {/* Bottom Feed Buffer: Menjauhkan teks dari pisau pemotong struk */}
-      <div style={{ height: '24px' }}></div>
+      {/* Bottom Feed Buffer Standar */}
+      <div style={{ height: '14px' }}></div>
     </div>
   );
 }

@@ -36,28 +36,28 @@ body {
 
   .struk-kasir {
     display: block !important;
-    /* Lebar presisi roll 58mm (head cetak efektif 48mm) */
-    width: 48mm !important;
-    max-width: 48mm !important;
+    /* Lebar cetak aman agar sisi kanan dan kiri pas simetris di tengah */
+    width: 43mm !important;
+    max-width: 43mm !important;
     box-sizing: border-box !important;
 
-    /* Posisi simetris di tengah (center) roll kertas 58mm */
-    margin-left: 2.5mm !important;
+    /* Geser 5.5mm ke kanan untuk melewati margin mati fisik printer thermal */
+    margin-left: 5.5mm !important;
     margin-right: auto !important;
     margin-top: 0 !important;
     margin-bottom: 0 !important;
 
-    /* Ruang aman atas dan bawah */
-    padding-top: 10mm !important;
-    padding-bottom: 8mm !important;
+    /* Pangkas ruang atas yang terlalu jauh, cukup 2mm */
+    padding-top: 2mm !important;
+    padding-bottom: 5mm !important;
     padding-left: 0.5mm !important;
     padding-right: 0.5mm !important;
 
     font-family: 'Courier New', Courier, monospace !important;
     font-size: 11px !important;
     font-weight: 600 !important;
-    line-height: 1.3 !important;
-    letter-spacing: -0.2px !important;
+    line-height: 1.25 !important;
+    letter-spacing: -0.3px !important;
     color: #000000 !important;
 
     /* Cegah duplikasi atau halaman ke-2 */
