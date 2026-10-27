@@ -113,12 +113,34 @@ export default function AdminDashboard() {
     { id: string; name: string; barcode: string; price: number; unit: string }[]
   >([]);
 
+  // Modal Tambah Barcode Baru State
+  const [isAddBarcodeOpen, setIsAddBarcodeOpen] = useState(false);
+  const [newBarcodeName, setNewBarcodeName] = useState('');
+  const [newBarcodePrice, setNewBarcodePrice] = useState('');
+  const [newBarcodeUnit, setNewBarcodeUnit] = useState('kg');
+  const [newBarcodeCode, setNewBarcodeCode] = useState('');
+  const [newBarcodeCategoryId, setNewBarcodeCategoryId] = useState('');
+  const [newBarcodeQty, setNewBarcodeQty] = useState(1);
+  const [savingBarcode, setSavingBarcode] = useState(false);
+
   // Generator Barcode Internal Acak (EAN-13 format internal: prefix 20 + 10 digit unik)
   const generateInternalBarcode = () => {
     const timestampPart = Date.now().toString().slice(-8); // 8 digit terakhir timestamp
     const randomPart = Math.floor(10 + Math.random() * 90); // 2 digit acak
     return `20${timestampPart}${randomPart}`;
   };
+
+  // Buka modal Tambah Barcode Baru
+  const handleOpenAddBarcodeModal = () => {
+    setIsAddBarcodeOpen(true);
+    setNewBarcodeName('');
+    setNewBarcodePrice('');
+    setNewBarcodeUnit('kg');
+    setNewBarcodeCode(generateInternalBarcode());
+    setNewBarcodeCategoryId(categories[0]?.id || '');
+    setNewBarcodeQty(1);
+  };
+
 
   // Orders State
   const [orders, setOrders] = useState<Order[]>([]);
@@ -1230,6 +1252,16 @@ export default function AdminDashboard() {
               </button>
             </div>
           )}
+          {activeTab === 'barcodes' && (
+            <div className="flex items-center gap-2 mb-2">
+              <button
+                onClick={() => handleOpenAddBarcodeModal()}
+                className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+              >
+                <Plus className="w-3.5 h-3.5" /> + Tambah Barcode Baru
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ========================================================================= */}
@@ -2029,277 +2061,123 @@ export default function AdminDashboard() {
         )}
 
         {/* ========================================================================= */}
-        {/* TAB 5: GENERATE & CETAK LABEL BARCODE (UNTUK BARANG NON-BARCODE SEPERTI TELUR/TERIGU) */}
+        {/* TAB 5: KELOLA & CETAK LABEL BARCODE PRODUK TOKO (TERSINKRON DATABASE) */}
         {/* ========================================================================= */}
         {activeTab === 'barcodes' && (
           <div className="space-y-6">
-            {/* Header Deskripsi Tab */}
-            <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-6 rounded-3xl border border-orange-200">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <h3 className="font-black text-stone-900 text-lg flex items-center gap-2">
-                    <Barcode className="w-6 h-6 text-orange-600" /> Cetak Label Barcode Toko
-                  </h3>
-                  <p className="text-xs text-stone-600 mt-1 max-w-2xl leading-relaxed">
-                    Khusus untuk barang eceran/curah yang tidak memiliki barcode kemasan dari pabrik (misal: <strong>Telur 1kg, Terigu Curah, Minyak Literan, Gula Pasir</strong>). Label dicetak rapi dan tajam langsung ke printer thermal 58mm/80mm agar bisa di-scan kasir dalam hitungan detik.
-                  </p>
-                </div>
+            {/* Header Deskripsi & Aksi Cepat */}
+            <div className="bg-gradient-to-r from-orange-50 to-amber-50 p-6 rounded-3xl border border-orange-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-black text-stone-900 text-lg flex items-center gap-2">
+                  <Barcode className="w-6 h-6 text-orange-600" /> Cetak & Kelola Barcode Toko
+                </h3>
+                <p className="text-xs text-stone-600 mt-1 max-w-xl leading-relaxed">
+                  Semua barang yang dibuat di sini otomatis <strong>tersimpan ke database produk</strong>. Jika stiker di wadah barang (telur/terigu) sudah usang, Anda bisa mencetak ulang kapan saja hanya dengan 1 klik.
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={handleOpenAddBarcodeModal}
+                className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-black text-xs rounded-2xl shadow-md shadow-orange-600/20 cursor-pointer flex items-center gap-2 active:scale-95 shrink-0"
+              >
+                <Plus className="w-4 h-4" /> + Buat Barcode Baru
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* KOLOM KIRI: FORM PILIH BARANG & JUMLAH CETAK */}
-              <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-4">
-                <h4 className="font-extrabold text-stone-900 text-sm flex items-center gap-2 border-b border-stone-100 pb-3">
-                  <Plus className="w-4 h-4 text-orange-600" /> Tambah Produk ke Antrean Cetak
-                </h4>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-1">
-                      PILIH PRODUK *
-                    </label>
-                    <select
-                      value={selectedBarcodeProduct}
-                      onChange={(e) => setSelectedBarcodeProduct(e.target.value)}
-                      className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 text-xs font-bold focus:ring-2 focus:ring-orange-500 focus:outline-none"
-                    >
-                      <option value="">-- Pilih Barang yang Akan Dicetak --</option>
-                      {products.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} ({p.barcode ? `Barcode: ${p.barcode}` : '⚠️ Belum Ada Barcode'}) - {formatRupiah(p.price)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Keterangan Jika Produk Belum Punya Barcode */}
-                  {selectedBarcodeProduct && (() => {
-                    const chosen = products.find((p) => p.id === selectedBarcodeProduct);
-                    if (chosen && !chosen.barcode) {
-                      return (
-                        <div className="p-3 bg-amber-50 border border-amber-300 rounded-2xl space-y-2">
-                          <p className="text-xs text-amber-900 font-bold flex items-center gap-1.5">
-                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" /> Produk ini belum memiliki barcode!
-                          </p>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              const autoCode = generateInternalBarcode();
-                              try {
-                                const res = await fetch('/api/admin/products', {
-                                  method: 'PUT',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    productId: chosen.id,
-                                    barcode: autoCode,
-                                  }),
-                                });
-                                const json = await res.json();
-                                if (json.success) {
-                                  alert(`Berhasil membuat barcode internal: ${autoCode}`);
-                                  fetchProducts();
-                                } else {
-                                  alert(json.message);
-                                }
-                              } catch (e) {
-                                alert('Gagal membuat barcode otomatis.');
-                              }
-                            }}
-                            className="w-full py-2 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center justify-center gap-1"
-                          >
-                            <Sparkles className="w-3.5 h-3.5" /> Buat Barcode Otomatis Sekarang
-                          </button>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
-
-                  <div>
-                    <label className="block text-xs font-bold text-stone-700 mb-1">
-                      JUMLAH LABEL YANG AKAN DICETAK (PCS)
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center border border-stone-300 rounded-xl bg-stone-50 overflow-hidden">
-                        <button
-                          type="button"
-                          onClick={() => setBarcodeLabelQty((q) => Math.max(1, q - 1))}
-                          className="px-3 py-2 text-stone-600 hover:bg-stone-200 cursor-pointer font-black"
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          min="1"
-                          max="100"
-                          value={barcodeLabelQty}
-                          onChange={(e) => setBarcodeLabelQty(Math.max(1, Number(e.target.value) || 1))}
-                          className="w-16 text-center font-black text-stone-900 text-sm bg-transparent focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setBarcodeLabelQty((q) => q + 1)}
-                          className="px-3 py-2 text-stone-600 hover:bg-stone-200 cursor-pointer font-black"
-                        >
-                          +
-                        </button>
-                      </div>
-
-                      <div className="flex gap-1.5">
-                        {[1, 5, 10, 20].map((preset) => (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => setBarcodeLabelQty(preset)}
-                            className="px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-lg cursor-pointer"
-                          >
-                            {preset}x
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!selectedBarcodeProduct) {
-                        alert('Silakan pilih produk terlebih dahulu!');
-                        return;
-                      }
-                      const chosen = products.find((p) => p.id === selectedBarcodeProduct);
-                      if (!chosen) return;
-                      if (!chosen.barcode) {
-                        alert('Produk ini belum memiliki barcode. Silakan klik tombol "Buat Barcode Otomatis" di atas terlebih dahulu!');
-                        return;
-                      }
-
-                      setBarcodePrintList((prev) => {
-                        const existingIdx = prev.findIndex((item) => item.product.id === chosen.id);
-                        if (existingIdx >= 0) {
-                          const updated = [...prev];
-                          updated[existingIdx].count += barcodeLabelQty;
-                          return updated;
-                        }
-                        return [...prev, { product: chosen, count: barcodeLabelQty }];
-                      });
-
-                      setSelectedBarcodeProduct('');
-                      setBarcodeLabelQty(1);
-                    }}
-                    className="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold text-xs rounded-xl shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <Plus className="w-4 h-4" /> Masukkan ke Daftar Cetak
-                  </button>
-                </div>
+            {/* Tabel Daftar Produk dengan Barcode Tersimpan */}
+            <div className="bg-white rounded-3xl border border-stone-200 shadow-xs overflow-hidden">
+              <div className="p-4 bg-stone-50 border-b border-stone-200 font-extrabold text-xs text-stone-600 uppercase tracking-wider grid grid-cols-12 gap-2 items-center">
+                <div className="col-span-5 sm:col-span-4">Nama Produk & Barcode</div>
+                <div className="col-span-3 sm:col-span-3">Harga Satuan</div>
+                <div className="col-span-4 sm:col-span-5 text-right">Aksi Cetak Label Thermal</div>
               </div>
 
-              {/* KOLOM KANAN: DAFTAR ANTREAN CETAK & TOMBOL ACTION CETAK THERMAL */}
-              <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-4">
-                <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                  <div>
-                    <h4 className="font-extrabold text-stone-900 text-sm flex items-center gap-2">
-                      <Printer className="w-4 h-4 text-orange-600" /> Antrean Cetak Label ({barcodePrintList.reduce((a, b) => a + b.count, 0)} Total Stiker)
-                    </h4>
-                  </div>
-                  {barcodePrintList.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setBarcodePrintList([])}
-                      className="text-xs text-red-600 hover:text-red-700 font-bold cursor-pointer"
-                    >
-                      Kosongkan Antrean
-                    </button>
-                  )}
-                </div>
-
-                {barcodePrintList.length > 0 ? (
-                  <div className="space-y-4">
-                    <div className="divide-y divide-stone-100 border border-stone-100 rounded-2xl overflow-hidden">
-                      {barcodePrintList.map(({ product, count }, idx) => (
-                        <div key={product.id} className="p-3 flex items-center justify-between hover:bg-stone-50">
-                          <div>
-                            <h5 className="font-bold text-stone-900 text-xs">{product.name}</h5>
-                            <div className="text-[11px] text-stone-500 font-mono">
-                              Kode: <strong className="text-stone-800">{product.barcode}</strong> | {formatRupiah(product.price)} / {product.unit}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-3">
-                            <span className="bg-orange-100 text-orange-800 font-extrabold text-xs px-2.5 py-1 rounded-full">
-                              {count} lembar
+              <div className="divide-y divide-stone-100">
+                {products.filter((p) => Boolean(p.barcode)).length > 0 ? (
+                  products
+                    .filter((p) => Boolean(p.barcode))
+                    .map((item) => (
+                      <div
+                        key={item.id}
+                        className="p-4 grid grid-cols-12 gap-2 items-center hover:bg-stone-50/80 transition-colors text-xs sm:text-sm"
+                      >
+                        <div className="col-span-5 sm:col-span-4">
+                          <h4 className="font-bold text-stone-900 leading-tight">{item.name}</h4>
+                          <div className="text-[11px] text-stone-500 font-mono flex items-center gap-1.5 mt-0.5">
+                            <Barcode className="w-3.5 h-3.5 text-stone-400" />
+                            <span className="font-bold text-stone-800 bg-stone-100 px-1.5 py-0.5 rounded">
+                              {item.barcode}
                             </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setBarcodePrintList((prev) => prev.filter((_, i) => i !== idx));
-                              }}
-                              className="p-1 text-stone-400 hover:text-red-600 cursor-pointer"
-                              title="Hapus dari antrean"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
                           </div>
                         </div>
-                      ))}
-                    </div>
 
-                    {/* Tombol Cetak ke Printer Thermal */}
-                    <div className="p-4 bg-orange-50/60 rounded-2xl border border-orange-200 space-y-2">
-                      <div className="flex justify-between items-center text-xs font-bold text-stone-700">
-                        <span>Total Label Siap Cetak:</span>
-                        <span className="font-black text-orange-700 text-sm">
-                          {barcodePrintList.reduce((a, b) => a + b.count, 0)} Label
-                        </span>
-                      </div>
+                        <div className="col-span-3 sm:col-span-3">
+                          <span className="font-black text-stone-900">{formatRupiah(item.price)}</span>
+                          <span className="text-stone-500 text-[11px] font-medium"> / {item.unit}</span>
+                        </div>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const flatItems: { id: string; name: string; barcode: string; price: number; unit: string }[] = [];
-                          barcodePrintList.forEach(({ product, count }) => {
-                            if (product.barcode) {
-                              for (let i = 0; i < count; i++) {
-                                flatItems.push({
-                                  id: product.id,
-                                  name: product.name,
-                                  barcode: product.barcode,
-                                  price: product.price,
-                                  unit: product.unit,
-                                });
+                        <div className="col-span-4 sm:col-span-5 text-right flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Cetak 1 Lembar Cepat
+                              setSelectedPrintOrder(null);
+                              setPrintableBarcodeItems([
+                                {
+                                  id: item.id,
+                                  name: item.name,
+                                  barcode: item.barcode!,
+                                  price: item.price,
+                                  unit: item.unit,
+                                },
+                              ]);
+                              setTimeout(() => {
+                                window.print();
+                              }, 300);
+                            }}
+                            className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-extrabold text-xs rounded-xl shadow-2xs cursor-pointer flex items-center gap-1.5 active:scale-95"
+                            title="Cetak 1 lembar label sekarang"
+                          >
+                            <Printer className="w-3.5 h-3.5" /> Cetak (1x)
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const qtyPrompt = prompt(`Berapa lembar label barcode "${item.name}" yang ingin dicetak?`, '5');
+                              const count = Number(qtyPrompt);
+                              if (count && count > 0) {
+                                const list = [];
+                                for (let i = 0; i < count; i++) {
+                                  list.push({
+                                    id: item.id,
+                                    name: item.name,
+                                    barcode: item.barcode!,
+                                    price: item.price,
+                                    unit: item.unit,
+                                  });
+                                }
+                                setSelectedPrintOrder(null);
+                                setPrintableBarcodeItems(list);
+                                setTimeout(() => {
+                                  window.print();
+                                }, 300);
                               }
-                            }
-                          });
-
-                          if (flatItems.length === 0) {
-                            alert('Tidak ada barcode yang valid untuk dicetak!');
-                            return;
-                          }
-
-                          // Matikan struk pesanan kasir yang mungkin tersimpan agar tidak ikut tercetak
-                          setSelectedPrintOrder(null);
-                          setPrintableBarcodeItems(flatItems);
-
-                          setTimeout(() => {
-                            window.print();
-                          }, 300);
-                        }}
-                        className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-black text-sm rounded-xl shadow-md shadow-orange-600/20 cursor-pointer active:scale-98 flex items-center justify-center gap-2"
-                      >
-                        <Printer className="w-5 h-5" /> Cetak Label ke Printer Thermal 58mm/80mm
-                      </button>
-                      <p className="text-[11px] text-stone-500 text-center italic">
-                        Label akan tercetak bersusun dengan garis potong putus-putus.
-                      </p>
-                    </div>
-                  </div>
+                            }}
+                            className="px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-xs rounded-xl border border-stone-200 cursor-pointer hidden sm:flex items-center gap-1"
+                            title="Cetak dalam jumlah banyak"
+                          >
+                            Cetak Banyak...
+                          </button>
+                        </div>
+                      </div>
+                    ))
                 ) : (
-                  <div className="text-center py-12 text-stone-400">
+                  <div className="text-center py-16 text-stone-400">
                     <div className="text-4xl mb-2">🏷️</div>
-                    <p className="text-xs font-bold text-stone-600">Antrean cetak barcode masih kosong.</p>
+                    <p className="text-xs font-bold text-stone-600">Belum ada barcode yang tersimpan.</p>
                     <p className="text-[11px] text-stone-400 mt-1">
-                      Pilih produk sembako di sebelah kiri dan klik &quot;Masukkan ke Daftar Cetak&quot;.
+                      Klik tombol &quot;+ Buat Barcode Baru&quot; di atas untuk membuat barcode produk curah seperti Telur atau Terigu.
                     </p>
                   </div>
                 )}
@@ -2505,6 +2383,216 @@ export default function AdminDashboard() {
                   className="w-1/2 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold shadow-md cursor-pointer"
                 >
                   {editingProduct ? 'Simpan Perubahan' : 'Simpan Produk Baru'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Tambah Barcode Baru (Tersimpan ke Produk & Langsung Cetak Struk Thermal) */}
+      {isAddBarcodeOpen && (
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white max-w-md w-full p-6 rounded-3xl border border-stone-200 shadow-2xl space-y-4 my-8 animate-in fade-in zoom-in-95 duration-100">
+            <div className="flex justify-between items-center border-b border-stone-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center font-black">
+                  <Barcode className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-stone-900 text-base leading-tight">
+                    Tambah Barcode Produk
+                  </h3>
+                  <p className="text-[11px] text-stone-500">
+                    Untuk sembako curah (Telur, Terigu, Beras, dll)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddBarcodeOpen(false)}
+                className="text-stone-400 hover:text-stone-700 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!newBarcodeName.trim() || !newBarcodePrice) {
+                  alert('Nama produk dan harga wajib diisi!');
+                  return;
+                }
+
+                setSavingBarcode(true);
+                try {
+                  const res = await fetch('/api/admin/products', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      name: newBarcodeName.trim(),
+                      price: Number(newBarcodePrice),
+                      unit: newBarcodeUnit.trim() || 'pcs',
+                      barcode: newBarcodeCode.trim(),
+                      categoryId: newBarcodeCategoryId || categories[0]?.id,
+                      inStock: true,
+                    }),
+                  });
+
+                  const json = await res.json();
+                  if (json.success) {
+                    const savedProduct = json.data;
+                    setIsAddBarcodeOpen(false);
+                    fetchProducts();
+
+                    // Siapkan item untuk dicetak langsung ke printer thermal
+                    const listToPrint = [];
+                    const qty = Math.max(1, newBarcodeQty);
+                    for (let i = 0; i < qty; i++) {
+                      listToPrint.push({
+                        id: savedProduct.id,
+                        name: savedProduct.name,
+                        barcode: savedProduct.barcode,
+                        price: savedProduct.price,
+                        unit: savedProduct.unit,
+                      });
+                    }
+
+                    setSelectedPrintOrder(null);
+                    setPrintableBarcodeItems(listToPrint);
+
+                    // Beri jeda 300ms agar DOM selesai render lalu langsung print
+                    setTimeout(() => {
+                      window.print();
+                    }, 300);
+                  } else {
+                    alert(json.message);
+                  }
+                } catch (err) {
+                  alert('Gagal menyimpan barcode produk.');
+                } finally {
+                  setSavingBarcode(false);
+                }
+              }}
+              className="space-y-3.5 text-xs"
+            >
+              {/* Nama Barang */}
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">
+                  Nama Barang Curah / Eceran *
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  value={newBarcodeName}
+                  onChange={(e) => setNewBarcodeName(e.target.value)}
+                  placeholder="Contoh: Telur Ayam Negeri 1kg / Terigu Segitiga 1kg"
+                  className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 font-semibold focus:ring-2 focus:ring-orange-500 focus:bg-white focus:outline-none"
+                />
+              </div>
+
+              {/* Harga & Satuan */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">
+                    Harga Jual (Rp) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={newBarcodePrice}
+                    onChange={(e) => setNewBarcodePrice(e.target.value)}
+                    placeholder="28000"
+                    className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 font-bold focus:ring-2 focus:ring-orange-500 focus:bg-white focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">
+                    Satuan
+                  </label>
+                  <input
+                    type="text"
+                    value={newBarcodeUnit}
+                    onChange={(e) => setNewBarcodeUnit(e.target.value)}
+                    placeholder="kg / bungkus / pcs"
+                    className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 focus:ring-2 focus:ring-orange-500 focus:bg-white focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Nomor Barcode Acak Unik Otomatis */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-bold text-stone-700">
+                    Nomor Barcode (Otomatis Acak & Belum Terpakai)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setNewBarcodeCode(generateInternalBarcode())}
+                    className="text-[10px] font-black text-orange-600 hover:text-orange-700 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200 cursor-pointer flex items-center gap-1"
+                  >
+                    <Sparkles className="w-3 h-3" /> Acak Ulang
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={newBarcodeCode}
+                  onChange={(e) => setNewBarcodeCode(e.target.value)}
+                  className="w-full p-2.5 bg-stone-100 border border-stone-300 rounded-xl text-stone-900 font-mono font-black tracking-wider text-center text-sm"
+                />
+              </div>
+
+              {/* Jumlah Label Cetak Awal */}
+              <div>
+                <label className="block font-bold text-stone-700 mb-1">
+                  Jumlah Label yang Langsung Dicetak
+                </label>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 5, 10].map((qty) => (
+                    <button
+                      key={qty}
+                      type="button"
+                      onClick={() => setNewBarcodeQty(qty)}
+                      className={`flex-1 py-1.5 rounded-xl font-bold text-xs border cursor-pointer ${
+                        newBarcodeQty === qty
+                          ? 'bg-orange-600 text-white border-orange-600'
+                          : 'bg-stone-50 text-stone-700 border-stone-300 hover:bg-stone-100'
+                      }`}
+                    >
+                      {qty}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddBarcodeOpen(false)}
+                  className="w-1/3 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded-xl cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingBarcode}
+                  className="w-2/3 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-black rounded-xl shadow-md shadow-orange-600/20 cursor-pointer active:scale-98 flex items-center justify-center gap-1.5"
+                >
+                  {savingBarcode ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Menyimpan...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Printer className="w-4 h-4" />
+                      <span>Simpan & Cetak Label</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
