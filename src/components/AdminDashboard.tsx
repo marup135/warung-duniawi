@@ -583,6 +583,8 @@ export default function AdminDashboard() {
 
   // Buffer untuk menangkap scan barcode & input angka keyboard global
   const scanBufferRef = useRef('');
+  const barcodeScanBufferRef = useRef('');
+  const lastKeyTimeRef = useRef(0);
 
   // GLOBAL KEYBOARD SHORTCUT UNTUK KASIR ZERO-MOUSE & AUTO-SCANNER
   useEffect(() => {
@@ -602,6 +604,16 @@ export default function AdminDashboard() {
           setIsManualSearchOpen(false);
         }
         return;
+      }
+
+      // Deteksi Scanner Fisik: Scanner barcode menembakkan karakter sangat cepat (< 50ms per karakter)
+      const now = Date.now();
+      const diff = now - lastKeyTimeRef.current;
+      lastKeyTimeRef.current = now;
+
+      // Reset buffer scanner jika jeda ketikan > 200ms (artinya ketikan tangan manusia, bukan laser barcode)
+      if (diff > 200) {
+        barcodeScanBufferRef.current = '';
       }
 
       // 0. TOMBOL F2 -> BUKA MODAL TAMBAH PRODUK CEPAT (HARGA UTAMA, NAMA OPSIONAL)
@@ -626,13 +638,17 @@ export default function AdminDashboard() {
         return;
       }
 
-      // 1. INPUT ANGKA (0-9 / Numpad)
-      if (e.key >= '0' && e.key <= '9') {
-        if (activeEl?.id !== 'pos-cash-input') {
+      // 1. INPUT KARAKTER (0-9 / Huruf jika ada)
+      if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        // Simpan selalu ke buffer scanner barcode berkecepatan tinggi
+        barcodeScanBufferRef.current += e.key;
+
+        // Jika bukan di kotak input uang kasir dan input berupa angka, masukkan juga ke input uang
+        if (activeEl?.id !== 'pos-cash-input' && e.key >= '0' && e.key <= '9') {
           e.preventDefault();
           scanBufferRef.current += e.key;
           setCashGivenInput(scanBufferRef.current);
-        } else {
+        } else if (activeEl?.id === 'pos-cash-input' && e.key >= '0' && e.key <= '9') {
           scanBufferRef.current += e.key;
         }
         return;
@@ -640,6 +656,7 @@ export default function AdminDashboard() {
 
       // 2. TOMBOL BACKSPACE -> HAPUS ANGKA TERAKHIR
       if (e.key === 'Backspace') {
+        barcodeScanBufferRef.current = '';
         if (activeEl?.id !== 'pos-cash-input') {
           e.preventDefault();
           scanBufferRef.current = scanBufferRef.current.slice(0, -1);
@@ -653,6 +670,7 @@ export default function AdminDashboard() {
       // 3. TOMBOL 'c' / 'C' / 'Escape' -> RESET INPUT UANG
       if (e.key === 'c' || e.key === 'C' || e.key === 'Escape') {
         e.preventDefault();
+        barcodeScanBufferRef.current = '';
         scanBufferRef.current = '';
         setCashGivenInput('');
         return;
@@ -660,6 +678,7 @@ export default function AdminDashboard() {
 
       // 4. TOMBOL SPASI (Space) -> SET UANG PAS
       if (e.code === 'Space') {
+        barcodeScanBufferRef.current = '';
         if (activeEl?.id !== 'pos-cash-input') {
           e.preventDefault();
         }
@@ -673,20 +692,45 @@ export default function AdminDashboard() {
       // 5. TOMBOL ENTER -> PROCESS SCAN OR CHECKOUT
       if (e.key === 'Enter') {
         e.preventDefault();
-        const inputString = (scanBufferRef.current || cashGivenInput || '').trim();
 
-        if (!inputString && posCart.length > 0 && cashGivenNumber >= posTotalAmount) {
+        // Ambil prioritas string barcode scanner jika ada buffer scanner, atau fallback ke scanBuffer/cashGiven
+        const scannedCode = barcodeScanBufferRef.current.trim();
+        const manualCode = (scanBufferRef.current || cashGivenInput || '').trim();
+        const rawInput = scannedCode || manualCode;
+
+        barcodeScanBufferRef.current = ''; // Langsung reset buffer barcode
+
+        if (!rawInput && posCart.length > 0 && cashGivenNumber >= posTotalAmount) {
           handleCheckoutPos();
           scanBufferRef.current = '';
           return;
         }
 
-        if (!inputString) return;
+        if (!rawInput) return;
+
+        // Normalisasi angka saja (buang karakter aneh jika scanner mengirim prefix/suffix)
+        const cleanDigits = rawInput.replace(/\D/g, '');
 
         // Cek 1: Apakah input matches Barcode Produk?
-        const matchedProduct = products.find(
-          (p) => p.barcode && p.barcode.trim() === inputString
-        );
+        // Cocokkan secara eksak ATAU cocokkan 12 digit awal (toleransi EAN-13 vs EAN-12)
+        const matchedProduct = products.find((p) => {
+          if (!p.barcode) return false;
+          const pCode = p.barcode.trim();
+          const pDigits = pCode.replace(/\D/g, '');
+
+          // Cocok persis
+          if (pCode === rawInput || pDigits === cleanDigits) return true;
+
+          // Toleransi digit checksum EAN-13 (12 digit awal sama persis)
+          if (
+            (cleanDigits.length === 13 && pDigits.length === 12 && cleanDigits.startsWith(pDigits)) ||
+            (cleanDigits.length === 12 && pDigits.length === 13 && pDigits.startsWith(cleanDigits))
+          ) {
+            return true;
+          }
+
+          return false;
+        });
 
         if (matchedProduct) {
           // Berhasil scan barang! Tambah ke keranjang & reset input uang
@@ -697,15 +741,15 @@ export default function AdminDashboard() {
         }
 
         // Cek 2: Jika panjang string >= 7 (Barcode EAN-8/13 yang tidak terdaftar di DB)
-        if (inputString.length >= 7) {
-          alert(`Produk dengan Barcode "${inputString}" tidak ditemukan!`);
+        if (cleanDigits.length >= 7) {
+          alert(`Produk dengan Barcode "${rawInput}" tidak ditemukan!`);
           scanBufferRef.current = '';
           setCashGivenInput('');
           return;
         }
 
         // Cek 3: Input berupa nominal uang pembeli (misal 10000, 20000, 50000)
-        const cashVal = Number(inputString) || cashGivenNumber;
+        const cashVal = Number(manualCode) || cashGivenNumber;
         if (posCart.length > 0 && cashVal >= posTotalAmount) {
           handleCheckoutPos(undefined, cashVal);
           scanBufferRef.current = '';
@@ -2481,6 +2525,8 @@ export default function AdminDashboard() {
                   if (json.success) {
                     const savedProduct = json.data;
                     setIsAddBarcodeOpen(false);
+                    // Langsung masukkan produk baru ke memori array kasir agar saat discan langsung terbaca
+                    setProducts((prev) => [savedProduct, ...prev.filter((p) => p.id !== savedProduct.id)]);
                     fetchProducts();
 
                     // Siapkan item untuk dicetak langsung ke printer thermal
