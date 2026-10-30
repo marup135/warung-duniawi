@@ -123,23 +123,7 @@ export default function AdminDashboard() {
   const [powerActionModal, setPowerActionModal] = useState<'shutdown' | 'reboot' | null>(null);
   const [powerExecuting, setPowerExecuting] = useState(false);
   const [powerExecutedState, setPowerExecutedState] = useState<'shutdown' | 'reboot' | null>(null);
-  const [isYouTubeOpen, setIsYouTubeOpen] = useState(false);
-  const [youtubeQueryInput, setYoutubeQueryInput] = useState('');
-  const [activeYouTubeUrl, setActiveYouTubeUrl] = useState('https://www.youtube-nocookie.com/embed/jfKfPfyJRdk?autoplay=1'); // Lofi Chill Beats (Official 24/7 stream)
 
-  // Listener tombol Escape khusus untuk menutup YouTube Overlay dan kembali ke kasir
-  useEffect(() => {
-    const handleEscYouTube = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isYouTubeOpen) {
-        e.preventDefault();
-        setIsYouTubeOpen(false);
-      }
-    };
-    if (isYouTubeOpen) {
-      window.addEventListener('keydown', handleEscYouTube);
-      return () => window.removeEventListener('keydown', handleEscYouTube);
-    }
-  }, [isYouTubeOpen]);
 
   // Inisialisasi Kecerahan Layar dari localStorage
   useEffect(() => {
@@ -2838,7 +2822,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* MODUL 3: HIBURAN & MUSIK TOKO (YOUTUBE KIOSK READY) */}
+            {/* MODUL 3: HIBURAN & MUSIK TOKO (YOUTUBE RESMI) */}
             <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-stone-100 pb-3">
                 <div className="flex items-center gap-2.5">
@@ -2848,33 +2832,40 @@ export default function AdminDashboard() {
                   <div>
                     <h4 className="font-black text-stone-900 text-base leading-tight flex items-center gap-2">
                       Hiburan & Musik Toko (YouTube)
-                      <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">Kiosk Mode</span>
+                      <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">Resmi</span>
                     </h4>
                     <p className="text-[11px] text-stone-500">
-                      Buka YouTube resmi untuk memutar musik, sholawat, murottal, atau video pengiring jaga warung
+                      Buka Home YouTube resmi untuk memutar musik, murottal, atau video pengiring jaga warung
                     </p>
                   </div>
                 </div>
               </div>
 
               <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="space-y-1 text-xs text-stone-600">
+                <div className="space-y-1.5 text-xs text-stone-600">
                   <div className="font-bold text-stone-900 flex items-center gap-1.5">
                     <Play className="w-4 h-4 text-red-600 fill-red-600" />
-                    <span>Aman untuk Layar Kios Kasir:</span>
+                    <span>Petunjuk Navigasi & Musik Background:</span>
                   </div>
-                  <p className="leading-relaxed">
-                    Tampilan YouTube resmi akan terbuka dalam layar penuh. Cukup tekan tombol <kbd className="px-1.5 py-0.5 bg-stone-200 text-stone-800 rounded font-mono font-bold text-[10px]">ESC</kbd> di keyboard atau klik tombol merah <strong>&quot;Kembali ke Kasir&quot;</strong> di pojok layar kapan pun ada pembeli datang.
-                  </p>
+                  <ul className="space-y-1 text-[11px] text-stone-600">
+                    <li className="flex items-center gap-1.5">
+                      <span className="text-emerald-600 font-black">✓</span>
+                      <span><strong>Musik Tetap Menyala di Background:</strong> Tekan <kbd className="px-1.5 py-0.5 bg-stone-200 text-stone-800 rounded font-mono font-bold text-[10px]">Ctrl + Tab</kbd> untuk kembali ke kasir sambil musik terus berputar.</span>
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <span className="text-red-500 font-black">✓</span>
+                      <span><strong>Tutup YouTube & Matikan Musik:</strong> Tekan <kbd className="px-1.5 py-0.5 bg-stone-200 text-stone-800 rounded font-mono font-bold text-[10px]">Ctrl + W</kbd> untuk menutup tab YouTube seketika.</span>
+                    </li>
+                  </ul>
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => setIsYouTubeOpen(true)}
-                  className="w-full sm:w-auto px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-xs shadow-md shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all shrink-0"
+                  onClick={() => window.open('https://www.youtube.com', '_blank')}
+                  className="w-full sm:w-auto px-5 py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-xs shadow-md shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all shrink-0"
                 >
-                  <Video className="w-4 h-4" />
-                  <span>Buka YouTube Layar Penuh</span>
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Buka Home YouTube Resmi</span>
                 </button>
               </div>
             </div>
@@ -3695,92 +3686,6 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL FULLSCREEN SAFE YOUTUBE OVERLAY (KIOSK SAFE) */}
-      {isYouTubeOpen && (
-        <div className="fixed inset-0 z-[9999] bg-black flex flex-col animate-in fade-in duration-150">
-          {/* FLOATING TOP BAR ALWAYS-ON-TOP (ANTI-TERSESAT DI KIOSK MODE) */}
-          <div className="bg-stone-900/95 backdrop-blur-md px-4 py-2.5 flex flex-wrap items-center justify-between border-b border-stone-800 shadow-xl z-10 shrink-0 gap-3">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setIsYouTubeOpen(false)}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-black text-xs rounded-xl shadow-lg shadow-red-600/30 flex items-center gap-2 cursor-pointer transition-all border border-red-500"
-                title="Kembali ke Layar Kasir Toko"
-              >
-                <ArrowLeft className="w-4 h-4 stroke-[3]" />
-                <span>KEMBALI KE KASIR</span>
-                <span className="hidden sm:inline-block px-1.5 py-0.5 bg-red-950/60 rounded text-[10px] font-mono border border-red-400/40">
-                  ESC
-                </span>
-              </button>
-
-              {/* Preset Pilihan Siaran Musik / Murottal Toko */}
-              <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-                <button
-                  type="button"
-                  onClick={() => setActiveYouTubeUrl('https://www.youtube-nocookie.com/embed/jfKfPfyJRdk?autoplay=1')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    activeYouTubeUrl.includes('jfKfPfyJRdk')
-                      ? 'bg-amber-500 text-stone-950'
-                      : 'bg-stone-800 text-stone-300 hover:text-white'
-                  }`}
-                >
-                  ☕ Musik Lofi Santai
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveYouTubeUrl('https://www.youtube-nocookie.com/embed/5qap5aO4i9A?autoplay=1')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    activeYouTubeUrl.includes('5qap5aO4i9A')
-                      ? 'bg-amber-500 text-stone-950'
-                      : 'bg-stone-800 text-stone-300 hover:text-white'
-                  }`}
-                >
-                  🎧 Lofi Hip Hop Radio
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveYouTubeUrl('https://www.youtube-nocookie.com/embed/mAKsZ26SabQ?autoplay=1')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    activeYouTubeUrl.includes('mAKsZ26SabQ')
-                      ? 'bg-amber-500 text-stone-950'
-                      : 'bg-stone-800 text-stone-300 hover:text-white'
-                  }`}
-                >
-                  🌿 Akustik Santai Cafe
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] text-stone-400 hidden lg:inline">
-                Tekan tombol <kbd className="px-1.5 py-0.5 bg-stone-800 text-amber-400 rounded font-mono font-bold text-[10px] border border-stone-700">ESC</kbd> untuk kembali kapan saja
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsYouTubeOpen(false)}
-                className="p-2 text-stone-400 hover:text-white hover:bg-stone-800 rounded-xl cursor-pointer"
-                title="Tutup YouTube"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
-          {/* IFRAME YOUTUBE RESMI FULLSCREEN */}
-          <div className="flex-1 w-full h-full relative bg-black">
-            <iframe
-              key={activeYouTubeUrl}
-              src={activeYouTubeUrl}
-              title="YouTube Kiosk Player"
-              className="w-full h-full border-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            />
           </div>
         </div>
       )}

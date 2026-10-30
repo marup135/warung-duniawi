@@ -284,18 +284,14 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
         - Memanggil `window.scrollTo({ top: 0, behavior: 'smooth' })` saat modal ditutup atau produk berhasil disimpan (`handleSaveProductSubmit`).
         - Mereset posisi scroll saat tombol "+ Tambah Produk Baru" ditekan (`handleOpenAddProduct`), sehingga pengguna selalu berada di posisi atas yang nyaman saat mengisi maupun setelah menambah produk.
 
-[x] SPRINT 20: KIOSK ENTERTAINMENT & SAFE YOUTUBE INTEGRATION (SELESAI)
-    - Fitur Buka YouTube di Tab Pengaturan & Kios (/kasir-447):
-      * Kartu menu baru "📺 Hiburan & Musik Toko (YouTube)" pada tab Pengaturan & Kios.
-      * Tombol aksi "Buka YouTube Layar Penuh" yang dirancang khusus untuk layar Kiosk Ubuntu tanpa address bar.
-    - Fullscreen Safe Overlay UI (Anti-Tersesat di Mode Kiosk):
-      * Tampilan YouTube layar penuh (`fixed inset-0 z-[9999]`) yang terintegrasi di dalam aplikasi kasir.
-      * Floating Exit Bar / Tombol Melayang di pojok layar:
-        - Tombol merah kontras: `[ ⬅ Kembali ke Kasir (ESC) ]`
-        - Selalu berada di lapisan teratas (*always-on-top*) sehingga kasir atau penjaga toko tidak pernah terjebak di dalam YouTube.
-    - Kontrol Navigasi & Shortcut Kasir Cepat:
-      * Listener keyboard tombol `Esc` (Escape) untuk menutup YouTube seketika dan langsung kembali ke layar kasir POS.
-      * Saat kasir kembali, keranjang belanjaan dan sistem kasir tetap berada di kondisi siap transaksi tanpa reload ulang halaman.
+[x] SPRINT 20: KIOSK ENTERTAINMENT & OFFICIAL YOUTUBE INTEGRATION (SELESAI)
+    - Fitur Buka Home YouTube Resmi di Tab Pengaturan & Kios (/kasir-447):
+      * Kartu menu baru "📺 Hiburan & Musik Toko (YouTube Resmi)" pada tab Pengaturan & Kios.
+      * Tombol aksi "Buka Home YouTube Resmi" yang membuka tab resmi youtube.com secara langsung (bebas blokir iframe).
+    - Navigasi Cepat & Musik Background Kasir (Zero-Distraction Workflow):
+      * Musik Tetap Menyala di Background: Tekan shortcut keyboard `Ctrl + Tab` untuk kembali ke kasir POS melayani transaksi belanjaan, sementara musik/video YouTube terus mengalun di latar belakang.
+      * Tutup YouTube & Matikan Musik: Tekan shortcut keyboard `Ctrl + W` untuk langsung menutup tab YouTube dan otomatis kembali ke tab kasir.
+      * Menjaga performa web kasir tetap ringan dan bebas bug cross-origin iframe.
 
 [ ] SPRINT 21: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
     - Manajemen Shift Kasir (Buka & Tutup Kasir):
