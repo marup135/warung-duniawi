@@ -43,6 +43,10 @@ import {
   ShieldAlert,
   FileText,
   FileUp,
+  Video,
+  Play,
+  ExternalLink,
+  ArrowLeft,
 } from 'lucide-react';
 
 interface OrderItem {
@@ -119,6 +123,21 @@ export default function AdminDashboard() {
   const [powerActionModal, setPowerActionModal] = useState<'shutdown' | 'reboot' | null>(null);
   const [powerExecuting, setPowerExecuting] = useState(false);
   const [powerExecutedState, setPowerExecutedState] = useState<'shutdown' | 'reboot' | null>(null);
+  const [isYouTubeOpen, setIsYouTubeOpen] = useState(false);
+
+  // Listener tombol Escape khusus untuk menutup YouTube Overlay dan kembali ke kasir
+  useEffect(() => {
+    const handleEscYouTube = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isYouTubeOpen) {
+        e.preventDefault();
+        setIsYouTubeOpen(false);
+      }
+    };
+    if (isYouTubeOpen) {
+      window.addEventListener('keydown', handleEscYouTube);
+      return () => window.removeEventListener('keydown', handleEscYouTube);
+    }
+  }, [isYouTubeOpen]);
 
   // Inisialisasi Kecerahan Layar dari localStorage
   useEffect(() => {
@@ -276,6 +295,22 @@ export default function AdminDashboard() {
   const [newProdDesc, setNewProdDesc] = useState('');
   const [newProdImg, setNewProdImg] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const productNameInputRef = useRef<HTMLInputElement>(null);
+
+  // Kunci scroll halaman latar belakang dan auto-focus aman saat modal produk dibuka
+  useEffect(() => {
+    if (isAddProductOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      const timer = setTimeout(() => {
+        productNameInputRef.current?.focus({ preventScroll: true });
+      }, 50);
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        clearTimeout(timer);
+      };
+    }
+  }, [isAddProductOpen]);
 
   // Modal Import CSV State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -938,6 +973,10 @@ export default function AdminDashboard() {
 
   // Open Modal Tambah Produk Baru
   const handleOpenAddProduct = () => {
+    // Reset posisi layar ke atas seketika agar saat modal terbuka tampilan berada di atas
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
     setEditingProduct(null);
     setNewProdName('');
     setNewProdCategoryId(categories[0]?.id || '');
@@ -978,6 +1017,12 @@ export default function AdminDashboard() {
       if (json.success) {
         setIsAddProductOpen(false);
         fetchProducts();
+        // Otomatis kembalikan layar ke paling atas agar tombol "+ Tambah Produk" langsung terlihat
+        if (typeof window !== 'undefined') {
+          setTimeout(() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }, 100);
+        }
       } else {
         alert(json.message);
       }
@@ -2794,6 +2839,47 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* MODUL 3: HIBURAN & MUSIK TOKO (YOUTUBE KIOSK READY) */}
+            <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl bg-red-100 text-red-600 font-black flex items-center justify-center">
+                    <Video className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-stone-900 text-base leading-tight flex items-center gap-2">
+                      Hiburan & Musik Toko (YouTube)
+                      <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">Kiosk Mode</span>
+                    </h4>
+                    <p className="text-[11px] text-stone-500">
+                      Buka YouTube resmi untuk memutar musik, sholawat, murottal, atau video pengiring jaga warung
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-stone-50 p-4 rounded-2xl border border-stone-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="space-y-1 text-xs text-stone-600">
+                  <div className="font-bold text-stone-900 flex items-center gap-1.5">
+                    <Play className="w-4 h-4 text-red-600 fill-red-600" />
+                    <span>Aman untuk Layar Kios Kasir:</span>
+                  </div>
+                  <p className="leading-relaxed">
+                    Tampilan YouTube resmi akan terbuka dalam layar penuh. Cukup tekan tombol <kbd className="px-1.5 py-0.5 bg-stone-200 text-stone-800 rounded font-mono font-bold text-[10px]">ESC</kbd> di keyboard atau klik tombol merah <strong>&quot;Kembali ke Kasir&quot;</strong> di pojok layar kapan pun ada pembeli datang.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsYouTubeOpen(true)}
+                  className="w-full sm:w-auto px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black text-xs shadow-md shadow-red-600/20 flex items-center justify-center gap-2 cursor-pointer active:scale-95 transition-all shrink-0"
+                >
+                  <Video className="w-4 h-4" />
+                  <span>Buka YouTube Layar Penuh</span>
+                </button>
+              </div>
+            </div>
+
             {/* MODUL 3: KEAMANAN AKUN (UBAH EMAIL & PASSWORD LOGIN) */}
             <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-4">
               <div className="flex items-center gap-2.5 border-b border-stone-100 pb-3">
@@ -2942,8 +3028,8 @@ export default function AdminDashboard() {
 
       {/* Modal Tambah / Full Edit Produk (Terkunci di Tengah Layar & Internal Scroll) */}
       {isAddProductOpen && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white max-w-lg w-full max-h-[90vh] rounded-3xl border border-stone-200 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white max-w-lg w-full max-h-[84vh] my-auto rounded-3xl border border-stone-200 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header (Sticky) */}
             <div className="flex justify-between items-center p-5 border-b border-stone-100 bg-white">
               <div className="flex items-center gap-2.5">
@@ -2970,9 +3056,9 @@ export default function AdminDashboard() {
                   Nama Produk *
                 </label>
                 <input
+                  ref={productNameInputRef}
                   type="text"
                   required
-                  autoFocus
                   value={newProdName}
                   onChange={(e) => setNewProdName(e.target.value)}
                   placeholder="Misal: Beras Pandan Wangi 5kg"
@@ -3610,6 +3696,59 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL FULLSCREEN SAFE YOUTUBE OVERLAY (KIOSK SAFE) */}
+      {isYouTubeOpen && (
+        <div className="fixed inset-0 z-[9999] bg-black flex flex-col animate-in fade-in duration-150">
+          {/* FLOATING TOP BAR ALWAYS-ON-TOP (ANTI-TERSESAT DI KIOSK MODE) */}
+          <div className="bg-stone-900/95 backdrop-blur-md px-4 py-2.5 flex items-center justify-between border-b border-stone-800 shadow-xl z-10 shrink-0">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsYouTubeOpen(false)}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-black text-xs rounded-xl shadow-lg shadow-red-600/30 flex items-center gap-2 cursor-pointer transition-all border border-red-500"
+                title="Kembali ke Layar Kasir Toko"
+              >
+                <ArrowLeft className="w-4 h-4 stroke-[3]" />
+                <span>KEMBALI KE KASIR</span>
+                <span className="hidden sm:inline-block px-1.5 py-0.5 bg-red-950/60 rounded text-[10px] font-mono border border-red-400/40">
+                  ESC
+                </span>
+              </button>
+
+              <div className="hidden md:flex items-center gap-2 text-stone-300 text-xs font-bold border-l border-stone-700 pl-3">
+                <Video className="w-4 h-4 text-red-500" />
+                <span>Mode Hiburan Kasir (YouTube Resmi)</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-stone-400 hidden sm:inline">
+                Tekan tombol <kbd className="px-1.5 py-0.5 bg-stone-800 text-amber-400 rounded font-mono font-bold text-[10px] border border-stone-700">ESC</kbd> untuk kembali kapan saja
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsYouTubeOpen(false)}
+                className="p-2 text-stone-400 hover:text-white hover:bg-stone-800 rounded-xl cursor-pointer"
+                title="Tutup YouTube"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* IFRAME YOUTUBE RESMI FULLSCREEN */}
+          <div className="flex-1 w-full h-full relative bg-black">
+            <iframe
+              src="https://www.youtube.com/embed?listType=search&list=lagu+santai+indonesia"
+              title="YouTube Kiosk Player"
+              className="w-full h-full border-0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+            />
           </div>
         </div>
       )}

@@ -272,7 +272,32 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
     - Hardening Keamanan Akses Login:
       * Menghapus placeholder bawaan yang membocorkan pola email (`admin@warungduniawi.com`) dan password di form login `/kasir-447`.
 
-[ ] SPRINT 19: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
+[x] SPRINT 19: FIX MODAL VIEWPORT ALIGNMENT & POST-SAVE AUTO-SCROLL TO TOP (SELESAI)
+    - Masalah yang Ditemukan:
+      * 1. Saat modal Tambah Produk dibuka, posisinya sedikit offset ke bawah sehingga pengguna harus scroll terlebih dahulu.
+      * 2. Setelah simpan produk berhasil, halaman atau kontainer tertinggal/turun ke bawah sehingga jika ingin menambah produk baru lagi pengguna terpaksa harus scroll manual ke atas.
+    - Rencana Perbaikan:
+      * Modal Position Centering (True Viewport Center):
+        - Menggunakan viewport lock pada backdrop modal (`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4`) dan memastikan form internal memiliki ukuran maksimal yang proporsional (`max-h-[82vh]`) tanpa mendesak modal keluar dari batas atas layar.
+        - Memastikan elemen `autoFocus` tidak memicu *browser scroll jump* yang menggeser jendela window ke bawah.
+      * Auto-Scroll to Top / Reset Scroll After Product Action:
+        - Memanggil `window.scrollTo({ top: 0, behavior: 'smooth' })` saat modal ditutup atau produk berhasil disimpan (`handleSaveProductSubmit`).
+        - Mereset posisi scroll saat tombol "+ Tambah Produk Baru" ditekan (`handleOpenAddProduct`), sehingga pengguna selalu berada di posisi atas yang nyaman saat mengisi maupun setelah menambah produk.
+
+[x] SPRINT 20: KIOSK ENTERTAINMENT & SAFE YOUTUBE INTEGRATION (SELESAI)
+    - Fitur Buka YouTube di Tab Pengaturan & Kios (/kasir-447):
+      * Kartu menu baru "📺 Hiburan & Musik Toko (YouTube)" pada tab Pengaturan & Kios.
+      * Tombol aksi "Buka YouTube Layar Penuh" yang dirancang khusus untuk layar Kiosk Ubuntu tanpa address bar.
+    - Fullscreen Safe Overlay UI (Anti-Tersesat di Mode Kiosk):
+      * Tampilan YouTube layar penuh (`fixed inset-0 z-[9999]`) yang terintegrasi di dalam aplikasi kasir.
+      * Floating Exit Bar / Tombol Melayang di pojok layar:
+        - Tombol merah kontras: `[ ⬅ Kembali ke Kasir (ESC) ]`
+        - Selalu berada di lapisan teratas (*always-on-top*) sehingga kasir atau penjaga toko tidak pernah terjebak di dalam YouTube.
+    - Kontrol Navigasi & Shortcut Kasir Cepat:
+      * Listener keyboard tombol `Esc` (Escape) untuk menutup YouTube seketika dan langsung kembali ke layar kasir POS.
+      * Saat kasir kembali, keranjang belanjaan dan sistem kasir tetap berada di kondisi siap transaksi tanpa reload ulang halaman.
+
+[ ] SPRINT 21: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
     - Manajemen Shift Kasir (Buka & Tutup Kasir):
       * Input Modal Awal Kas Kecil saat kasir mulai buka toko (misal: Rp 100.000)
       * Pencatatan kas keluar manual (misal: beli es batu, bayar sampah, kembalian darurat)
@@ -284,7 +309,7 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Filter rentang waktu analitik: Hari Ini, Kemarin, 7 Hari Terakhir, Bulan Ini
       * Breakdown metode bayar: Tunai vs QRIS vs Transfer
 
-[ ] SPRINT 20: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
+[ ] SPRINT 22: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
     - Manajemen Kuantitas Stok Riil:
       * Mengubah status stok dari sekadar boolean (Ada/Habis) menjadi angka kuantitas riil (`stockQuantity`)
       * Pengurangan stok otomatis setiap ada transaksi kasir POS atau pesanan online masuk
