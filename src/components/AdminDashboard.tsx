@@ -149,17 +149,28 @@ export default function AdminDashboard() {
         const val = Number(savedBrightness);
         if (val >= 30 && val <= 100) {
           setScreenBrightness(val);
+          if (document.documentElement) {
+            document.documentElement.style.filter = val < 100 ? `brightness(${val}%)` : '';
+          }
         }
       }
     } catch {
       // localStorage fallback
     }
+    return () => {
+      if (document.documentElement) {
+        document.documentElement.style.filter = '';
+      }
+    };
   }, []);
 
   // Update kecerahan layar & simpan ke localStorage
   const handleUpdateBrightness = (val: number) => {
     const clamped = Math.min(100, Math.max(30, val));
     setScreenBrightness(clamped);
+    if (document.documentElement) {
+      document.documentElement.style.filter = clamped < 100 ? `brightness(${clamped}%)` : '';
+    }
     try {
       localStorage.setItem('wd_kiosk_brightness', String(clamped));
     } catch {
@@ -1440,12 +1451,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div
-      className="min-h-screen bg-[#FAF8F5] text-stone-900 font-sans pb-16 transition-[filter] duration-200"
-      style={{
-        filter: screenBrightness < 100 ? `brightness(${screenBrightness}%)` : undefined,
-      }}
-    >
+    <div className="min-h-screen bg-[#FAF8F5] text-stone-900 font-sans pb-16">
       {/* Top Navbar Dashboard */}
       <header className="sticky top-0 z-30 bg-stone-900 text-white px-4 py-3 shadow-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -3019,10 +3025,10 @@ export default function AdminDashboard() {
         )}
       </main>
 
-      {/* Modal Tambah / Full Edit Produk (Terkunci di Tengah Layar & Internal Scroll) */}
+      {/* Modal Tambah / Full Edit Produk (Terkunci di Atas Layar & Internal Scroll) */}
       {isAddProductOpen && (
-        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white max-w-lg w-full max-h-[84vh] my-auto rounded-3xl border border-stone-200 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-start justify-center p-3 sm:p-4 pt-6 sm:pt-10 overflow-y-auto">
+          <div className="bg-white max-w-lg w-full max-h-[85vh] rounded-3xl border border-stone-200 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header (Sticky) */}
             <div className="flex justify-between items-center p-5 border-b border-stone-100 bg-white">
               <div className="flex items-center gap-2.5">
