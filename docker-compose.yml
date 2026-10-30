@@ -10,6 +10,8 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=file:/app/data/prod.db
+    devices:
+      - "/dev/snd:/dev/snd" # Mapping driver suara host agar Docker bisa langsung atur ALSA speaker
     volumes:
       - warungduniawi-data:/app/data
       - warungduniawi-uploads:/app/public/uploads

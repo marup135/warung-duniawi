@@ -307,7 +307,19 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Audio feedback otomatis ("Ting / Chime") saat volume digeser sebagai preview tingkat kenyaringan suara.
       * Penyimpanan otomatis ke `localStorage` agar volume tersimpan konsisten saat komputer dihidupkan ulang.
 
-[ ] SPRINT 22: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
+[x] SPRINT 22: FIX KIOSK HOST AUDIO BRIDGING (VOLUME HARDWARE DOCKER/HOST) (SELESAI)
+    - Masalah yang Diselesaikan:
+      * Slider volume di UI web kasir berhasil mengirim request, namun suara speaker fisik host Ubuntu sebelumnya belum berubah karena container Docker terisolasi dari socket audio host Linux (/dev/snd atau PulseAudio/Pipewire).
+    - Perbaikan Terisolasi (Zero-Impact ke Print, YouTube & Kasir):
+      * 1. Dual-Audio Control (Web Audio + Host Audio):
+        - Gain volume Web Audio API (chime notifikasi & beep kasir) dikontrol langsung di browser via master gain node dinamis (`speakerVolumeRef / 100`) sehingga volume notifikasi kasir langsung berubah seketika di browser dan mendukung mode Mute (0%).
+        - Backend API `/api/admin/system/volume`: Menambahkan rangkaian fallback perintah audio Linux lengkap (wpctl WirePlumber PipeWire Ubuntu modern, pactl PulseAudio, dan amixer direct ALSA).
+      * 2. Docker Compose Device Binding:
+        - Menambahkan pemetaan device `/dev/snd:/dev/snd` pada `docker-compose.yml` agar container dapat langsung mengakses driver audio kartu suara host Linux.
+      * 3. Prinsip Isolasi Ketat Terpenuhi:
+        - Tidak menyentuh komponen ThermalReceipt, dialog cetak struk, maupun link tab YouTube resmi. Build Next.js lulus verifikasi 100% tanpa error.
+
+[ ] SPRINT 23: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
     - Manajemen Shift Kasir (Buka & Tutup Kasir):
       * Input Modal Awal Kas Kecil saat kasir mulai buka toko (misal: Rp 100.000)
       * Pencatatan kas keluar manual (misal: beli es batu, bayar sampah, kembalian darurat)
@@ -319,7 +331,7 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Filter rentang waktu analitik: Hari Ini, Kemarin, 7 Hari Terakhir, Bulan Ini
       * Breakdown metode bayar: Tunai vs QRIS vs Transfer
 
-[ ] SPRINT 23: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
+[ ] SPRINT 24: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
     - Manajemen Kuantitas Stok Riil:
       * Mengubah status stok dari sekadar boolean (Ada/Habis) menjadi angka kuantitas riil (`stockQuantity`)
       * Pengurangan stok otomatis setiap ada transaksi kasir POS atau pesanan online masuk

@@ -125,6 +125,7 @@ export default function AdminDashboard() {
   // Kiosk Brightness & Hardware Settings State
   const [screenBrightness, setScreenBrightness] = useState<number>(100);
   const [speakerVolume, setSpeakerVolume] = useState<number>(70);
+  const speakerVolumeRef = useRef<number>(70);
   const [powerActionModal, setPowerActionModal] = useState<'shutdown' | 'reboot' | null>(null);
   const [powerExecuting, setPowerExecuting] = useState(false);
   const [powerExecutedState, setPowerExecutedState] = useState<'shutdown' | 'reboot' | null>(null);
@@ -148,6 +149,7 @@ export default function AdminDashboard() {
         const vol = Number(savedVolume);
         if (vol >= 0 && vol <= 100) {
           setSpeakerVolume(vol);
+          speakerVolumeRef.current = vol;
         }
       }
     } catch {
@@ -178,6 +180,7 @@ export default function AdminDashboard() {
   const handleUpdateVolume = async (val: number, previewSound = true) => {
     const clamped = Math.round(Math.min(100, Math.max(0, val)));
     setSpeakerVolume(clamped);
+    speakerVolumeRef.current = clamped;
 
     try {
       localStorage.setItem('wd_kiosk_volume', String(clamped));
@@ -187,7 +190,7 @@ export default function AdminDashboard() {
 
     // Play chime preview jika volume > 0
     if (previewSound && clamped > 0) {
-      playChimeSound();
+      playChimeSound(clamped);
     }
 
     // Kirim perintah ke backend host Ubuntu
@@ -496,16 +499,22 @@ export default function AdminDashboard() {
   };
 
   // Suara Beep Ramah Kasir Minimarket untuk Scan Barcode (Pitch Tinggi)
-  const playScanBeep = () => {
+  const playScanBeep = (volOverride?: number) => {
     try {
+      const vol = typeof volOverride === 'number' ? volOverride : speakerVolumeRef.current;
+      if (vol <= 0) return; // Mute
+
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
 
+      const baseGain = 0.2;
+      const targetGain = baseGain * (vol / 100);
+
       osc.type = 'sine';
       osc.frequency.setValueAtTime(1800, audioCtx.currentTime); // Pitch tinggi ala scanner toko
-      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.12);
+      gain.gain.setValueAtTime(targetGain, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
 
       osc.connect(gain);
       gain.connect(audioCtx.destination);
@@ -518,16 +527,22 @@ export default function AdminDashboard() {
   };
 
   // Suara Chime Audio "Ting!"
-  const playChimeSound = () => {
+  const playChimeSound = (volOverride?: number) => {
     try {
+      const vol = typeof volOverride === 'number' ? volOverride : speakerVolumeRef.current;
+      if (vol <= 0) return; // Mute
+
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
 
+      const baseGain = 0.35;
+      const targetGain = baseGain * (vol / 100);
+
       osc.type = 'sine';
       osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+      gain.gain.setValueAtTime(targetGain, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
 
       osc.connect(gain);
       gain.connect(audioCtx.destination);
@@ -1514,7 +1529,7 @@ export default function AdminDashboard() {
             </button>
 
             <button
-              onClick={playChimeSound}
+              onClick={() => playChimeSound()}
               className="p-2 text-stone-300 hover:text-white bg-stone-800 rounded-xl text-xs flex items-center gap-1 cursor-pointer"
               title="Tes Suara Bel Notif"
             >

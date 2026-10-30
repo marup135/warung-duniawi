@@ -34,9 +34,18 @@ export async function POST(req: Request) {
     }
 
     // 2. Eksekusi perintah audio host Linux jika memiliki akses audio (ALSA / PulseAudio / PipeWire)
-    // - pactl set-sink-volume @DEFAULT_SINK@ X% (PulseAudio/Pipewire)
-    // - amixer set Master X% (ALSA direct)
-    const audioCmd = `amixer set Master ${clampedVolume}% || amixer set PCM ${clampedVolume}% || pactl set-sink-volume @DEFAULT_SINK@ ${clampedVolume}%`;
+    // - WirePlumber (modern PipeWire di Ubuntu 22.04 / 24.04): wpctl set-volume @DEFAULT_AUDIO_SINK@ X
+    // - PulseAudio / PipeWire compat: pactl set-sink-volume @DEFAULT_SINK@ X%
+    // - ALSA direct: amixer -D pulse sset Master X% || amixer sset Master X% || amixer set Master X%
+    const normalizedDecimal = (clampedVolume / 100).toFixed(2);
+    const audioCmd = [
+      `wpctl set-volume @DEFAULT_AUDIO_SINK@ ${normalizedDecimal}`,
+      `pactl set-sink-volume @DEFAULT_SINK@ ${clampedVolume}%`,
+      `amixer -D pulse sset Master ${clampedVolume}%`,
+      `amixer sset Master ${clampedVolume}%`,
+      `amixer set Master ${clampedVolume}%`,
+      `amixer set PCM ${clampedVolume}%`
+    ].join(' || ');
 
     exec(audioCmd, (error, stdout, stderr) => {
       if (error) {
