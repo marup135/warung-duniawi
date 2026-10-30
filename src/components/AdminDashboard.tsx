@@ -124,6 +124,8 @@ export default function AdminDashboard() {
   const [powerExecuting, setPowerExecuting] = useState(false);
   const [powerExecutedState, setPowerExecutedState] = useState<'shutdown' | 'reboot' | null>(null);
   const [isYouTubeOpen, setIsYouTubeOpen] = useState(false);
+  const [youtubeQueryInput, setYoutubeQueryInput] = useState('');
+  const [activeYouTubeUrl, setActiveYouTubeUrl] = useState('https://www.youtube-nocookie.com/embed/jfKfPfyJRdk?autoplay=1'); // Lofi Chill Beats (Official 24/7 stream)
 
   // Listener tombol Escape khusus untuk menutup YouTube Overlay dan kembali ke kasir
   useEffect(() => {
@@ -297,18 +299,13 @@ export default function AdminDashboard() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const productNameInputRef = useRef<HTMLInputElement>(null);
 
-  // Kunci scroll halaman latar belakang dan auto-focus aman saat modal produk dibuka
+  // Focus input Nama Produk secara aman saat modal produk dibuka
   useEffect(() => {
     if (isAddProductOpen) {
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
       const timer = setTimeout(() => {
         productNameInputRef.current?.focus({ preventScroll: true });
       }, 50);
-      return () => {
-        document.body.style.overflow = originalOverflow;
-        clearTimeout(timer);
-      };
+      return () => clearTimeout(timer);
     }
   }, [isAddProductOpen]);
 
@@ -973,10 +970,6 @@ export default function AdminDashboard() {
 
   // Open Modal Tambah Produk Baru
   const handleOpenAddProduct = () => {
-    // Reset posisi layar ke atas seketika agar saat modal terbuka tampilan berada di atas
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'instant' });
-    }
     setEditingProduct(null);
     setNewProdName('');
     setNewProdCategoryId(categories[0]?.id || '');
@@ -3704,7 +3697,7 @@ export default function AdminDashboard() {
       {isYouTubeOpen && (
         <div className="fixed inset-0 z-[9999] bg-black flex flex-col animate-in fade-in duration-150">
           {/* FLOATING TOP BAR ALWAYS-ON-TOP (ANTI-TERSESAT DI KIOSK MODE) */}
-          <div className="bg-stone-900/95 backdrop-blur-md px-4 py-2.5 flex items-center justify-between border-b border-stone-800 shadow-xl z-10 shrink-0">
+          <div className="bg-stone-900/95 backdrop-blur-md px-4 py-2.5 flex flex-wrap items-center justify-between border-b border-stone-800 shadow-xl z-10 shrink-0 gap-3">
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -3719,14 +3712,46 @@ export default function AdminDashboard() {
                 </span>
               </button>
 
-              <div className="hidden md:flex items-center gap-2 text-stone-300 text-xs font-bold border-l border-stone-700 pl-3">
-                <Video className="w-4 h-4 text-red-500" />
-                <span>Mode Hiburan Kasir (YouTube Resmi)</span>
+              {/* Preset Pilihan Siaran Musik / Murottal Toko */}
+              <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveYouTubeUrl('https://www.youtube-nocookie.com/embed/jfKfPfyJRdk?autoplay=1')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeYouTubeUrl.includes('jfKfPfyJRdk')
+                      ? 'bg-amber-500 text-stone-950'
+                      : 'bg-stone-800 text-stone-300 hover:text-white'
+                  }`}
+                >
+                  ☕ Musik Lofi Santai
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveYouTubeUrl('https://www.youtube-nocookie.com/embed/5qap5aO4i9A?autoplay=1')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeYouTubeUrl.includes('5qap5aO4i9A')
+                      ? 'bg-amber-500 text-stone-950'
+                      : 'bg-stone-800 text-stone-300 hover:text-white'
+                  }`}
+                >
+                  🎧 Lofi Hip Hop Radio
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveYouTubeUrl('https://www.youtube-nocookie.com/embed/mAKsZ26SabQ?autoplay=1')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeYouTubeUrl.includes('mAKsZ26SabQ')
+                      ? 'bg-amber-500 text-stone-950'
+                      : 'bg-stone-800 text-stone-300 hover:text-white'
+                  }`}
+                >
+                  🌿 Akustik Santai Cafe
+                </button>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-[11px] text-stone-400 hidden sm:inline">
+              <span className="text-[11px] text-stone-400 hidden lg:inline">
                 Tekan tombol <kbd className="px-1.5 py-0.5 bg-stone-800 text-amber-400 rounded font-mono font-bold text-[10px] border border-stone-700">ESC</kbd> untuk kembali kapan saja
               </span>
               <button
@@ -3743,7 +3768,8 @@ export default function AdminDashboard() {
           {/* IFRAME YOUTUBE RESMI FULLSCREEN */}
           <div className="flex-1 w-full h-full relative bg-black">
             <iframe
-              src="https://www.youtube.com/embed?listType=search&list=lagu+santai+indonesia"
+              key={activeYouTubeUrl}
+              src={activeYouTubeUrl}
               title="YouTube Kiosk Player"
               className="w-full h-full border-0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
