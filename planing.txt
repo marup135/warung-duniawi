@@ -293,7 +293,21 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Tutup YouTube & Matikan Musik: Tekan shortcut keyboard `Ctrl + W` untuk langsung menutup tab YouTube dan otomatis kembali ke tab kasir.
       * Menjaga performa web kasir tetap ringan dan bebas bug cross-origin iframe.
 
-[ ] SPRINT 21: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
+[x] SPRINT 21: KIOSK MASTER VOLUME CONTROL & AUDIO FEEDBACK (SELESAI)
+    - Backend API Pengatur Volume Host Linux:
+      * Endpoint API POST `/api/admin/system/volume` menerima parameter `volume` (0 - 100%).
+      * Integrasi eksekusi perintah audio Ubuntu host (`amixer set Master X%` / `pactl set-sink-volume @DEFAULT_SINK@ X%`).
+      * Penulisan sinyal persisten ke `data/volume.flag` agar sinkron dengan audio host server.
+    - Frontend Kontrol Volume di Tab Pengaturan & Kios (/kasir-447):
+      * Slider responsif pengatur volume (0% - 100%) dengan indikator persentase real-time.
+      * Tombol preset cepat 1-klik:
+        - 🔇 Senyap / Mute (0%)
+        - 🔉 Santai / Sedang (40% - Musik Latar Pas)
+        - 🔊 Ramai / Keras (80% - Jelas Saat Toko Bising)
+      * Audio feedback otomatis ("Ting / Chime") saat volume digeser sebagai preview tingkat kenyaringan suara.
+      * Penyimpanan otomatis ke `localStorage` agar volume tersimpan konsisten saat komputer dihidupkan ulang.
+
+[ ] SPRINT 22: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
     - Manajemen Shift Kasir (Buka & Tutup Kasir):
       * Input Modal Awal Kas Kecil saat kasir mulai buka toko (misal: Rp 100.000)
       * Pencatatan kas keluar manual (misal: beli es batu, bayar sampah, kembalian darurat)
@@ -305,7 +319,7 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Filter rentang waktu analitik: Hari Ini, Kemarin, 7 Hari Terakhir, Bulan Ini
       * Breakdown metode bayar: Tunai vs QRIS vs Transfer
 
-[ ] SPRINT 22: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
+[ ] SPRINT 23: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
     - Manajemen Kuantitas Stok Riil:
       * Mengubah status stok dari sekadar boolean (Ada/Habis) menjadi angka kuantitas riil (`stockQuantity`)
       * Pengurangan stok otomatis setiap ada transaksi kasir POS atau pesanan online masuk

@@ -47,6 +47,10 @@ import {
   Play,
   ExternalLink,
   ArrowLeft,
+  Volume,
+  Volume1,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 
 interface OrderItem {
@@ -120,12 +124,12 @@ export default function AdminDashboard() {
 
   // Kiosk Brightness & Hardware Settings State
   const [screenBrightness, setScreenBrightness] = useState<number>(100);
+  const [speakerVolume, setSpeakerVolume] = useState<number>(70);
   const [powerActionModal, setPowerActionModal] = useState<'shutdown' | 'reboot' | null>(null);
   const [powerExecuting, setPowerExecuting] = useState(false);
   const [powerExecutedState, setPowerExecutedState] = useState<'shutdown' | 'reboot' | null>(null);
 
-
-  // Inisialisasi Kecerahan Layar dari localStorage
+  // Inisialisasi Kecerahan Layar & Volume Speaker dari localStorage
   useEffect(() => {
     try {
       const savedBrightness = localStorage.getItem('wd_kiosk_brightness');
@@ -136,6 +140,14 @@ export default function AdminDashboard() {
           if (document.documentElement) {
             document.documentElement.style.filter = val < 100 ? `brightness(${val}%)` : '';
           }
+        }
+      }
+
+      const savedVolume = localStorage.getItem('wd_kiosk_volume');
+      if (savedVolume !== null) {
+        const vol = Number(savedVolume);
+        if (vol >= 0 && vol <= 100) {
+          setSpeakerVolume(vol);
         }
       }
     } catch {
@@ -159,6 +171,34 @@ export default function AdminDashboard() {
       localStorage.setItem('wd_kiosk_brightness', String(clamped));
     } catch {
       // fallback
+    }
+  };
+
+  // Update volume speaker host Linux & trigger chime preview
+  const handleUpdateVolume = async (val: number, previewSound = true) => {
+    const clamped = Math.round(Math.min(100, Math.max(0, val)));
+    setSpeakerVolume(clamped);
+
+    try {
+      localStorage.setItem('wd_kiosk_volume', String(clamped));
+    } catch {
+      // fallback
+    }
+
+    // Play chime preview jika volume > 0
+    if (previewSound && clamped > 0) {
+      playChimeSound();
+    }
+
+    // Kirim perintah ke backend host Ubuntu
+    try {
+      await fetch('/api/admin/system/volume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ volume: clamped }),
+      });
+    } catch (e) {
+      console.warn('Gagal sinkron volume ke server host:', e);
     }
   };
 
@@ -2766,7 +2806,122 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* MODUL 2: MANAJEMEN DAYA SERVER KOMPUTER KASIR */}
+              {/* MODUL 2: KONTROL VOLUME SUARA SPEAKER KIOS */}
+              <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-5">
+                <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-100 text-blue-700 font-black flex items-center justify-center">
+                      {speakerVolume === 0 ? (
+                        <VolumeX className="w-5 h-5 text-blue-600" />
+                      ) : speakerVolume < 50 ? (
+                        <Volume1 className="w-5 h-5 text-blue-600" />
+                      ) : (
+                        <Volume2 className="w-5 h-5 text-blue-600" />
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-black text-stone-900 text-base leading-tight">
+                        Volume Suara Speaker Kios
+                      </h4>
+                      <p className="text-[11px] text-stone-500">
+                        Atur kenyaringan musik dan suara bel pesanan
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`text-lg font-black px-3 py-1 rounded-xl border ${
+                    speakerVolume === 0
+                      ? 'text-stone-500 bg-stone-100 border-stone-200'
+                      : 'text-blue-600 bg-blue-50 border-blue-200'
+                  }`}>
+                    {speakerVolume === 0 ? 'Mute' : `${speakerVolume}%`}
+                  </span>
+                </div>
+
+                {/* Slider Volume */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-bold text-stone-500">
+                    <span className="flex items-center gap-1"><VolumeX className="w-3.5 h-3.5 text-stone-400" /> Senyap (0%)</span>
+                    <span className="flex items-center gap-1"><Volume2 className="w-3.5 h-3.5 text-blue-500" /> Maksimal (100%)</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={speakerVolume}
+                    onChange={(e) => handleUpdateVolume(Number(e.target.value), false)}
+                    onMouseUp={() => handleUpdateVolume(speakerVolume, true)}
+                    onTouchEnd={() => handleUpdateVolume(speakerVolume, true)}
+                    className="w-full h-3 bg-stone-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                </div>
+
+                {/* Tombol Preset Cepat Volume */}
+                <div className="space-y-2 pt-1">
+                  <label className="block text-xs font-black uppercase text-stone-400 tracking-wider">
+                    Pilihan Cepat (1-Klik):
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateVolume(0, false)}
+                      className={`p-3 rounded-2xl border text-center font-bold text-xs cursor-pointer transition-all ${
+                        speakerVolume === 0
+                          ? 'bg-stone-700 text-white border-stone-700 shadow-md'
+                          : 'bg-stone-50 hover:bg-stone-100 text-stone-800 border-stone-200'
+                      }`}
+                    >
+                      <VolumeX className="w-5 h-5 mx-auto mb-1 text-stone-400" />
+                      <span className="block font-black text-xs">Mute</span>
+                      <span className="text-[10px] opacity-80">0% Hening</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateVolume(40, true)}
+                      className={`p-3 rounded-2xl border text-center font-bold text-xs cursor-pointer transition-all ${
+                        speakerVolume === 40
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20'
+                          : 'bg-stone-50 hover:bg-stone-100 text-stone-800 border-stone-200'
+                      }`}
+                    >
+                      <Volume1 className="w-5 h-5 mx-auto mb-1 text-blue-400" />
+                      <span className="block font-black text-xs">Santai</span>
+                      <span className="text-[10px] opacity-80">40% Sedang</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateVolume(80, true)}
+                      className={`p-3 rounded-2xl border text-center font-bold text-xs cursor-pointer transition-all ${
+                        speakerVolume === 80
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20'
+                          : 'bg-stone-50 hover:bg-stone-100 text-stone-800 border-stone-200'
+                      }`}
+                    >
+                      <Volume2 className="w-5 h-5 mx-auto mb-1 text-indigo-300" />
+                      <span className="block font-black text-xs">Keras</span>
+                      <span className="text-[10px] opacity-80">80% Jelas</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-stone-50 p-3 rounded-2xl border border-stone-200 text-[11px] text-stone-500 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>Sinkron dengan speaker host Ubuntu.</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => playChimeSound()}
+                    className="text-blue-600 hover:text-blue-800 font-bold underline cursor-pointer text-[11px]"
+                  >
+                    Tes Suara
+                  </button>
+                </div>
+              </div>
+
+              {/* MODUL 3: MANAJEMEN DAYA SERVER KOMPUTER KASIR */}
               <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-xs space-y-5 flex flex-col justify-between">
                 <div className="space-y-4">
                   <div className="flex items-center gap-2.5 border-b border-stone-100 pb-3">
