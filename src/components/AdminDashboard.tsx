@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import ThermalReceipt from '@/components/ThermalReceipt';
 import ThermalBarcode from '@/components/ThermalBarcode';
+import BarcodeScannerModal from '@/components/BarcodeScannerModal';
 import {
   Store,
   Bell,
@@ -51,6 +53,7 @@ import {
   Volume1,
   Volume2,
   VolumeX,
+  Camera,
 } from 'lucide-react';
 
 interface OrderItem {
@@ -378,6 +381,10 @@ export default function AdminDashboard() {
   const [cashGivenInput, setCashGivenInput] = useState<string>('');
   const [submittingPos, setSubmittingPos] = useState(false);
   const [isManualSearchOpen, setIsManualSearchOpen] = useState(false);
+
+  // Camera Barcode Scanner State (HP & Tablet)
+  const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
+  const [scannerTarget, setScannerTarget] = useState<'pos' | 'product_form'>('pos');
 
   // Quick Add Product State (F2 Shortcut)
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
@@ -752,6 +759,42 @@ export default function AdminDashboard() {
       alert('Gagal memproses transaksi kasir');
     } finally {
       setSubmittingPos(false);
+    }
+  };
+
+  // Handler saat barcode berhasil di-scan dari kamera HP
+  const handleCameraScanSuccess = (decodedCode: string) => {
+    const rawInput = decodedCode.trim();
+    if (!rawInput) return;
+
+    if (scannerTarget === 'product_form') {
+      setNewProdBarcode(rawInput);
+      playScanBeep();
+      return;
+    }
+
+    // Target POS Kasir: Cari produk sesuai barcode
+    const cleanDigits = rawInput.replace(/\D/g, '');
+    const matchedProduct = products.find((p) => {
+      if (!p.barcode) return false;
+      const pCode = p.barcode.trim();
+      const pDigits = pCode.replace(/\D/g, '');
+
+      if (pCode === rawInput || pDigits === cleanDigits) return true;
+      if (
+        (cleanDigits.length === 13 && pDigits.length === 12 && cleanDigits.startsWith(pDigits)) ||
+        (cleanDigits.length === 12 && pDigits.length === 13 && pDigits.startsWith(cleanDigits))
+      ) {
+        return true;
+      }
+      return false;
+    });
+
+    if (matchedProduct) {
+      handleAddPosCart(matchedProduct);
+      playScanBeep();
+    } else {
+      alert(`Produk dengan Barcode "${rawInput}" belum terdaftar di katalog!`);
     }
   };
 
@@ -1418,8 +1461,14 @@ export default function AdminDashboard() {
       <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center p-4">
         <div className="w-full max-w-sm bg-white p-8 rounded-3xl border border-stone-200 shadow-xl space-y-6">
           <div className="text-center space-y-2">
-            <div className="w-14 h-14 bg-orange-600 text-white font-black text-2xl rounded-2xl flex items-center justify-center mx-auto shadow-md shadow-orange-600/20">
-              WD
+            <div className="relative w-20 h-20 mx-auto rounded-3xl overflow-hidden shadow-lg shadow-orange-600/20 bg-white border border-stone-200">
+              <Image
+                src="/logo.png"
+                alt="Logo Warung Duniawi"
+                fill
+                className="object-cover"
+                priority
+              />
             </div>
             <h2 className="text-2xl font-black text-stone-900">
               Akses Kasir & Admin
@@ -1495,8 +1544,13 @@ export default function AdminDashboard() {
       <header className="sticky top-0 z-30 bg-stone-900 text-white px-4 py-3 shadow-md">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-orange-500 font-extrabold text-sm rounded-xl flex items-center justify-center text-white">
-              WD
+            <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-white border border-stone-700 shrink-0">
+              <Image
+                src="/logo.png"
+                alt="Logo Warung Duniawi"
+                fill
+                className="object-cover"
+              />
             </div>
             <h1 className="font-extrabold text-base sm:text-lg flex items-center gap-2">
               Kasir Toko & Admin Warung
@@ -1665,6 +1719,18 @@ export default function AdminDashboard() {
                     <ShoppingBag className="w-5 h-5 text-orange-600" /> Daftar Barang ({posCart.reduce((a, b) => a + b.quantity, 0)} item)
                   </h3>
                   <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setScannerTarget('pos');
+                        setIsCameraScannerOpen(true);
+                      }}
+                      className="text-xs text-white font-black bg-stone-900 hover:bg-stone-800 px-3 py-1.5 rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95"
+                      title="Buka Kamera HP untuk scan barcode / QR code barang"
+                    >
+                      <Camera className="w-4 h-4 text-orange-400" />
+                      <span>Scan Kamera</span>
+                    </button>
                     <button
                       type="button"
                       onClick={handleOpenQuickAdd}
@@ -3251,14 +3317,27 @@ export default function AdminDashboard() {
                     <label className="font-bold text-stone-700">
                       Kode Barcode
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => setNewProdBarcode(generateInternalBarcode())}
-                      className="text-[10px] font-black text-orange-600 hover:text-orange-700 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200 cursor-pointer flex items-center gap-1"
-                      title="Buat barcode internal otomatis untuk telur/terigu/beras curah"
-                    >
-                      <Sparkles className="w-3 h-3" /> Auto
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setScannerTarget('product_form');
+                          setIsCameraScannerOpen(true);
+                        }}
+                        className="text-[10px] font-black text-stone-800 hover:text-stone-900 bg-stone-100 px-2 py-0.5 rounded-md border border-stone-300 cursor-pointer flex items-center gap-1"
+                        title="Scan barcode produk menggunakan kamera HP"
+                      >
+                        <Camera className="w-3 h-3 text-orange-600" /> Scan HP
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewProdBarcode(generateInternalBarcode())}
+                        className="text-[10px] font-black text-orange-600 hover:text-orange-700 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200 cursor-pointer flex items-center gap-1"
+                        title="Buat barcode internal otomatis untuk telur/terigu/beras curah"
+                      >
+                        <Sparkles className="w-3 h-3" /> Auto
+                      </button>
+                    </div>
                   </div>
                   <input
                     type="text"
@@ -3306,23 +3385,41 @@ export default function AdminDashboard() {
 
                 {/* Upload Box & Preview */}
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <label className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* Opsi 1: Foto Langsung dari Kamera HP */}
+                    <label className={`flex items-center justify-center gap-2 py-3 px-3 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
                       uploadingImage
                         ? 'bg-stone-100 border-stone-300 text-stone-400 cursor-not-allowed'
-                        : 'bg-orange-50/50 border-orange-300 hover:bg-orange-100/50 text-orange-700'
+                        : 'bg-emerald-50/60 border-emerald-300 hover:bg-emerald-100/60 text-emerald-800'
                     }`}>
                       {uploadingImage ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          <span className="text-xs font-bold">Sedang Mengunggah...</span>
-                        </>
+                        <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
-                        <>
-                          <Upload className="w-5 h-5 text-orange-600" />
-                          <span className="text-xs font-bold">Pilih / Ambil Foto (Maks 5MB)</span>
-                        </>
+                        <Camera className="w-4 h-4 text-emerald-600 shrink-0" />
                       )}
+                      <span className="text-xs font-bold leading-tight">Foto Kamera HP</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleImageUpload}
+                        disabled={uploadingImage}
+                        className="hidden"
+                      />
+                    </label>
+
+                    {/* Opsi 2: Upload dari Galeri / File */}
+                    <label className={`flex items-center justify-center gap-2 py-3 px-3 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                      uploadingImage
+                        ? 'bg-stone-100 border-stone-300 text-stone-400 cursor-not-allowed'
+                        : 'bg-orange-50/60 border-orange-300 hover:bg-orange-100/60 text-orange-800'
+                    }`}>
+                      {uploadingImage ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Upload className="w-4 h-4 text-orange-600 shrink-0" />
+                      )}
+                      <span className="text-xs font-bold leading-tight">Pilih dari Galeri</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -3331,18 +3428,20 @@ export default function AdminDashboard() {
                         className="hidden"
                       />
                     </label>
+                  </div>
 
-                    {newProdImg && (
+                  {newProdImg && (
+                    <div className="flex justify-end">
                       <button
                         type="button"
                         onClick={() => setNewProdImg('')}
-                        className="px-3 py-3 bg-stone-100 hover:bg-red-50 hover:text-red-600 text-stone-500 rounded-xl text-xs font-bold border border-stone-200 transition-colors cursor-pointer"
+                        className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold border border-red-200 transition-colors cursor-pointer flex items-center gap-1"
                         title="Hapus Foto"
                       >
-                        Hapus Foto
+                        <Trash2 className="w-3.5 h-3.5" /> Hapus Foto Terpasang
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   {/* Preview Foto */}
                   {newProdImg ? (
@@ -3859,6 +3958,15 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Modal Scanner Barcode / QR Code Kamera HP */}
+      <BarcodeScannerModal
+        isOpen={isCameraScannerOpen}
+        onClose={() => setIsCameraScannerOpen(false)}
+        onScanSuccess={handleCameraScanSuccess}
+        title={scannerTarget === 'pos' ? 'Scan Barang Kasir (Kamera HP)' : 'Scan Barcode Produk (Kamera HP)'}
+        subtitle={scannerTarget === 'pos' ? 'Arahkan kamera ke barcode/QR barang untuk langsung masuk keranjang kasir' : 'Arahkan kamera ke kemasan produk untuk input otomatis nomor barcode'}
+      />
     </div>
   );
 }

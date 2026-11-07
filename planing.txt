@@ -319,7 +319,26 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * 3. Prinsip Isolasi Ketat Terpenuhi:
         - Tidak menyentuh komponen ThermalReceipt, dialog cetak struk, maupun link tab YouTube resmi. Build Next.js lulus verifikasi 100% tanpa error.
 
-[ ] SPRINT 23: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
+[x] SPRINT 23: INTEGRASI KAMERA HP (FOTO PRODUK LANGSUNG & SCAN BARCODE/QR) (SELESAI)
+    - 1. Opsi Ambil Foto Produk Langsung via Kamera Belakang HP:
+      * Menyediakan tombol pilihan ganda di form Tambah/Edit Produk:
+        - 📸 "Foto Kamera HP" (Membuka langsung viewfinder kamera belakang HP menggunakan native capture HTML5 `capture="environment"`)
+        - 🖼️ "Pilih dari Galeri" (Memilih file foto dari memori galeri HP / komputer)
+      * Tombol hapus foto terpasang yang rapi dan indikator loading spinner saat proses unggah.
+    - 2. Live Scanner Barcode & QR Code via Kamera HP:
+      * Komponen modal pemindai kamera responsif [`BarcodeScannerModal.tsx`](file:///c:/Users/marup/OneDrive/Documents/project/warungduniawi/src/components/BarcodeScannerModal.tsx) bertenaga library standar industri `html5-qrcode`.
+      * Tombol "Scan Kamera" di monitor kasir POS:
+        - Otomatis menyalakan kamera HP / webcam
+        - Garis bidik laser & frame overlay visual
+        - Mendeteksi Barcode 1D (EAN-13, UPC, Code 128) & QR Code 2D secara instan
+        - Langsung membunyikan audio "Beep!" scanner toko & memasukkan produk ke keranjang kasir
+      * Tombol "Scan HP" di form Tambah/Edit Produk:
+        - Memindai kemasan barang dagangan langsung untuk mengisi kolom "Kode Barcode" secara otomatis.
+      * Fitur ganti kamera depan / belakang dengan 1 tombol.
+    - 3. Isolasi Sistem:
+      * Nol dampak pada komponen cetak struk thermal, database schema, volume audio, maupun pemutar YouTube. Verifikasi `npm run build` sukses 100% tanpa error.
+
+[ ] SPRINT 24: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
     - Manajemen Shift Kasir (Buka & Tutup Kasir):
       * Input Modal Awal Kas Kecil saat kasir mulai buka toko (misal: Rp 100.000)
       * Pencatatan kas keluar manual (misal: beli es batu, bayar sampah, kembalian darurat)
@@ -331,7 +350,7 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Filter rentang waktu analitik: Hari Ini, Kemarin, 7 Hari Terakhir, Bulan Ini
       * Breakdown metode bayar: Tunai vs QRIS vs Transfer
 
-[ ] SPRINT 24: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
+[ ] SPRINT 25: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
     - Manajemen Kuantitas Stok Riil:
       * Mengubah status stok dari sekadar boolean (Ada/Habis) menjadi angka kuantitas riil (`stockQuantity`)
       * Pengurangan stok otomatis setiap ada transaksi kasir POS atau pesanan online masuk

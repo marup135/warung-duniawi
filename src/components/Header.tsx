@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { ShoppingBag, Clock, MapPin, Phone } from 'lucide-react';
 
 interface HeaderProps {
@@ -26,8 +27,14 @@ export default function Header({ cartItemCount, onOpenCart }: HeaderProps) {
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
         {/* Brand Logo & Name */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white shadow-md shadow-orange-500/20 font-bold text-xl">
-            WD
+          <div className="relative w-11 h-11 rounded-2xl overflow-hidden shadow-md shadow-orange-500/20 bg-white border border-stone-200 shrink-0">
+            <Image
+              src="/logo.png"
+              alt="Logo Warung Duniawi"
+              fill
+              className="object-cover"
+              priority
+            />
           </div>
           <div>
             <h1 className="text-lg sm:text-xl font-extrabold text-stone-900 tracking-tight leading-none flex items-center gap-2">
