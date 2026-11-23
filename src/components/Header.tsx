@@ -12,17 +12,6 @@ interface HeaderProps {
 export default function Header({ cartItemCount, onOpenCart }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 bg-[#FAF8F5]/90 backdrop-blur-md border-b border-stone-200 shadow-xs">
-      {/* Top Announcement Bar */}
-      <div className="bg-amber-600 text-amber-50 text-xs font-medium py-1.5 px-4 text-center flex items-center justify-center gap-3">
-        <span className="flex items-center gap-1">
-          <Clock className="w-3.5 h-3.5" /> Buka Setiap Hari: 06.00 - 21.00 WIB
-        </span>
-        <span className="hidden sm:inline">•</span>
-        <span className="hidden sm:flex items-center gap-1">
-          <MapPin className="w-3.5 h-3.5" /> Siap Melayani Ambil di Tempat
-        </span>
-      </div>
-
       {/* Main Navigation Bar */}
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
         {/* Brand Logo & Name */}
@@ -52,13 +41,13 @@ export default function Header({ cartItemCount, onOpenCart }: HeaderProps) {
         {/* Action Button (Cart) */}
         <button
           onClick={onOpenCart}
-          className="relative flex items-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-semibold shadow-md shadow-orange-600/20 transition-all active:scale-95 cursor-pointer"
+          className="relative flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-md shadow-blue-600/20 transition-all active:scale-95 cursor-pointer"
           aria-label="Buka Keranjang"
         >
           <ShoppingBag className="w-5 h-5" />
           <span className="hidden sm:inline text-sm font-medium">Keranjang</span>
           {cartItemCount > 0 && (
-            <span className="bg-white text-orange-600 font-extrabold text-xs px-2 py-0.5 rounded-full shadow-xs">
+            <span className="bg-white text-blue-600 font-extrabold text-xs px-2 py-0.5 rounded-full shadow-xs">
               {cartItemCount}
             </span>
           )}
