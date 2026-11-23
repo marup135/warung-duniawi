@@ -53,10 +53,10 @@ export default function FilterBar({
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none snap-x">
         <button
           onClick={() => onSelectCategory('all')}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all cursor-pointer snap-start flex items-center gap-1.5 border ${
+          className={`px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all cursor-pointer snap-start flex items-center gap-2 border ${
             selectedCategory === 'all'
               ? 'bg-stone-900 text-white border-stone-900 shadow-sm'
-              : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-100'
+              : 'bg-white text-stone-700 border-stone-200/90 hover:bg-stone-50 hover:border-stone-300'
           }`}
         >
           <span>🛒</span> Semua Produk
@@ -68,10 +68,10 @@ export default function FilterBar({
             <button
               key={cat.id}
               onClick={() => onSelectCategory(cat.slug)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all cursor-pointer snap-start flex items-center gap-1.5 border ${
+              className={`px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all cursor-pointer snap-start flex items-center gap-2 border ${
                 isSelected
                   ? 'bg-orange-600 text-white border-orange-600 shadow-md shadow-orange-600/20'
-                  : 'bg-white text-stone-700 border-stone-200 hover:bg-stone-100 hover:border-stone-300'
+                  : 'bg-white text-stone-700 border-stone-200/90 hover:bg-stone-50 hover:border-stone-300'
               }`}
             >
               <span>{cat.icon || '📦'}</span> {cat.name}

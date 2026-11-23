@@ -47,8 +47,8 @@ export default function ProductCard({
     <div className="group relative bg-white border border-stone-200/80 rounded-2xl overflow-hidden shadow-xs hover:shadow-xl hover:border-orange-200 transition-all duration-300 flex flex-col h-full">
       {/* Badge Featured / Promo */}
       {product.isFeatured && (
-        <div className="absolute top-2.5 left-2.5 z-10 bg-amber-500 text-stone-900 font-extrabold text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-lg shadow-sm">
-          Favorit Warung
+        <div className="absolute top-2.5 left-2.5 z-10 bg-amber-400 text-stone-950 font-black text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-lg shadow-sm border border-amber-500/30">
+          ⭐ Favorit Warung
         </div>
       )}
 
@@ -64,7 +64,7 @@ export default function ProductCard({
             loading="lazy"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-4xl text-stone-300">
+          <div className="w-full h-full flex items-center justify-center text-4xl text-stone-300 bg-stone-50">
             📦
           </div>
         )}
