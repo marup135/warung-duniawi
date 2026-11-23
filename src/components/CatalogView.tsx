@@ -114,27 +114,20 @@ export default function CatalogView() {
 
       {/* Main Content Area */}
       <main className="max-w-6xl mx-auto px-3.5 sm:px-4 pt-4 sm:pt-6">
-        {/* Banner Hero Warung Cerah */}
-      <div className="mb-6 sm:mb-8 p-6 sm:p-10 rounded-3xl bg-gradient-to-br from-amber-500 via-orange-600 to-amber-700 text-white shadow-xl relative overflow-hidden">
-        {/* Subtle decorative background pattern */}
-        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
-        
-        <div className="absolute -right-6 -bottom-6 opacity-20 pointer-events-none transform rotate-12">
-          <Store className="w-56 h-56 sm:w-72 sm:h-72 text-white" />
-        </div>
-        
-        <div className="relative z-10 max-w-xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 backdrop-blur-md rounded-full text-xs font-semibold mb-3 tracking-wide border border-white/20 shadow-xs">
-            <Sparkles className="w-3.5 h-3.5 text-amber-200" /> Warung Sembako & Harian Modern
+        {/* Minimalist Top Bar / Compact Welcome */}
+        <div className="mb-4 sm:mb-5 flex items-center justify-between px-1">
+          <div>
+            <h2 className="text-lg sm:text-xl font-extrabold text-stone-900 tracking-tight">
+              Katalog Warung Duniawi
+            </h2>
+            <p className="text-stone-500 text-xs sm:text-sm">
+              Belanja kebutuhan harian praktis, tanpa antre.
+            </p>
           </div>
-          <h2 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight text-white drop-shadow-xs">
-            Belanja Sembako Tanpa Antre di Warung Duniawi!
-          </h2>
-          <p className="mt-2.5 text-stone-100 text-sm sm:text-base leading-relaxed font-normal opacity-95">
-            Pilih kebutuhan harian langsung dari HP. Bisa ambil di warung atau diantar ke rumah (Khusus KP. Pamundayan 1).
-          </p>
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-xl text-xs font-semibold border border-blue-200">
+            <span>🛵</span> Layanan Antar / Ambil
+          </div>
         </div>
-      </div>
 
         {/* Filter Bar & Search */}
         <FilterBar

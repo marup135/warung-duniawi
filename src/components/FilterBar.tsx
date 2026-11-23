@@ -70,7 +70,7 @@ export default function FilterBar({
               onClick={() => onSelectCategory(cat.slug)}
               className={`px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all cursor-pointer snap-start flex items-center gap-2 border ${
                 isSelected
-                  ? 'bg-orange-600 text-white border-orange-600 shadow-md shadow-orange-600/20'
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20'
                   : 'bg-white text-stone-700 border-stone-200/90 hover:bg-stone-50 hover:border-stone-300'
               }`}
             >
