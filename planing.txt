@@ -7,7 +7,7 @@
 # Tema Desain: Cerah, Hangat, Segar, Anti-AI-Slop (Organik & Ramah HP)
 # ==============================================================================
 
-[STATUS PROJECT: PLANNING PHASE - MENUNGGU PERSETUJUAN USER]
+[STATUS PROJECT: ACTIVE DEVELOPMENT - SPRINT 25 (QUICK-ADD POS)]
 
 --------------------------------------------------------------------------------
 PRODUCT GOAL (Tujuan Utama)
@@ -338,7 +338,45 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
     - 3. Isolasi Sistem:
       * Nol dampak pada komponen cetak struk thermal, database schema, volume audio, maupun pemutar YouTube. Verifikasi `npm run build` sukses 100% tanpa error.
 
-[ ] SPRINT 24: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
+[x] SPRINT 24: ADVANCED INVENTORY (STOK KUANTITAS RIIL & PENGURANGAN OTOMATIS) (SELESAI)
+    - 1. Kolom Database & Schema Prisma:
+      * Penambahan kolom `stockQuantity Int @default(10)` pada tabel `Product`.
+      * Sinkronisasi otomatis status boolean `inStock` (jika kuantitas 0 -> otomatis Habis; jika > 0 -> Tersedia).
+    - 2. Pengurangan Stok Otomatis (Real-time Inventory Deduction):
+      * Transaksi kasir toko offline (`/api/admin/pos`): Setiap kasir checkout belanjaan, stok produk terkait otomatis berkurang riil.
+      * Pesanan online pembeli (`/api/orders`): Transaksi atomik Prisma memvalidasi ketersediaan kuantitas stok riil dan mengurangi stok saat pesanan masuk. Mencegah pembelian barang yang stoknya kurang/habis.
+    - 3. Manajemen Stok di Admin Dashboard (/kasir-447):
+      * Input "Stok Tersedia" pada Modal Tambah & Full Edit Produk.
+      * Quick Edit Kuantitas Stok langsung pada baris tabel katalog (tombol badge stok dapat diklik untuk memasukkan angka kuantitas baru secara instan).
+      * Saklar toggle status ketersediaan (Ada/Habis) tetap berfungsi mulus.
+      * Indikator warna dinamis: Merah (Habis / 0), Kuning (Menipis <= 5), Hijau (Aman > 5).
+    - 4. Integrasi CSV Impor & Ekspor:
+      * File ekspor CSV kini menyertakan kolom "Jumlah Stok" berdampingan dengan "Status Stok".
+      * Impor CSV mengenali header `jumlah` / `qty` / `kuantitas` untuk mengisi stok massal.
+    - 5. Etalase Pembeli (Storefront & ProductCard):
+      * Menampilkan badge peringatan "Sisa X [satuan]" saat stok barang menipis (<= 5).
+      * Tombol beli otomatis nonaktif dan berganti label "Stok Habis" jika sisa kuantitas 0.
+
+[x] SPRINT 25: QUICK-ADD PRODUK OTOMATIS SAAT SCAN DI POS (GAPTEK-FRIENDLY) (SELESAI)
+    - Deteksi Otomatis Barcode Tidak Terdaftar di POS:
+      * Saat kasir scan barcode yang belum ada di database (baik via scanner USB fisik maupun kamera HP), sistem memunculkan Pop-up Mini Cepat dengan audio feedback dual-tone
+      * Kolom Harga Jual (Rp) langsung auto-focus & terseleksi agar kasir cukup mengetik angka via numpad/keyboard dan tekan Enter
+    - Nama Dummy Otomatis & Nilai Default Aman:
+      * Nama produk otomatis terisi format rapi `Barang Baru (<kode_barcode>)` dan tetap bisa diedit langsung jika diinginkan
+      * Nilai default otomatis: Kategori umum/pertama, satuan `pcs`, stok awal `10`, status `inStock: true`
+    - Simpan & Masuk Keranjang Sekaligus:
+      * Tekan Enter -> Validasi harga (> 0), simpan produk baru secara permanen ke database via `/api/admin/products`, dan langsung otomatis masuk ke keranjang kasir POS tanpa perlu scan ulang
+      * Tekan Esc -> Tutup pop-up tanpa menyimpan (jika kasir salah scan barang)
+    - Kemudahan Rapikan Data Nanti:
+      * Produk dengan nama `Barang Baru (...)` mudah dicari/difilter di tab Kelola Produk untuk dilengkapi nama asli dan fotonya saat toko sepi
+    - Tombol Darurat Kembali ke Kasir (Emergency Home Shortcut):
+      * Tombol fisik `Home` atau `F1` di keyboard: dari tab atau menu manapun Bapak berada, sekali pencet langsung otomatis menutup modal terbuka dan seketika kembali ke monitor Kasir Toko (POS)
+      * Disertai badge petunjuk visual `[Home / F1]` di tab menu kasir agar mudah diingat
+      * Disertai audio chime/beep lembut sebagai konfirmasi bahwa layar telah kembali ke kasir
+    - Verifikasi Build:
+      * Lulus uji Next.js build dan kompilasi TypeScript 100% tanpa error
+
+[ ] SPRINT 26: KEUANGAN KASIR, SHIFT & REKAP LABA BERSIH (PLANNING)
     - Manajemen Shift Kasir (Buka & Tutup Kasir):
       * Input Modal Awal Kas Kecil saat kasir mulai buka toko (misal: Rp 100.000)
       * Pencatatan kas keluar manual (misal: beli es batu, bayar sampah, kembalian darurat)
@@ -350,13 +388,11 @@ SPRINT BREAKDOWN (Rencana Kerja Bertahap)
       * Filter rentang waktu analitik: Hari Ini, Kemarin, 7 Hari Terakhir, Bulan Ini
       * Breakdown metode bayar: Tunai vs QRIS vs Transfer
 
-[ ] SPRINT 25: ADVANCED INVENTORY (STOK KUANTITAS & LOG KULAKAN) (PLANNING)
-    - Manajemen Kuantitas Stok Riil:
-      * Mengubah status stok dari sekadar boolean (Ada/Habis) menjadi angka kuantitas riil (`stockQuantity`)
-      * Pengurangan stok otomatis setiap ada transaksi kasir POS atau pesanan online masuk
-      * Pengembalian stok otomatis jika pesanan online dibatalkan
-    - Indikator & Peringatan Stok Menipis (Low-Stock Alert):
-      * Pengaturan batas minimum stok (misal: warning jika sisa < 3 pcs)
+[ ] SPRINT 27: ADVANCED INVENTORY LANJUTAN (RESTOCK LOG & KARTU STOK) (PLANNING)
+    - Pengembalian Stok Otomatis:
+      * Mengembalikan kuantitas stok secara otomatis jika pesanan online dibatalkan
+    - Indikator & Peringatan Stok Menipis Kustom (Low-Stock Alert):
+      * Pengaturan batas minimum stok per produk (misal: warning jika sisa < 3 pcs)
       * Badge peringatan mencolok di dashboard untuk barang yang hampir habis
     - Riwayat Kulakan / Barang Masuk (Restock Log):
       * Formulir pencatatan barang kulakan baru: Jumlah barang masuk, tanggal, supplier/distributor, dan update harga modal

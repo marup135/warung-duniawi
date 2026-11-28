@@ -13,6 +13,7 @@ export interface ProductItem {
   unit: string;
   imageUrl?: string | null;
   inStock: boolean;
+  stockQuantity?: number;
   isFeatured: boolean;
   category: {
     id: string;
@@ -70,7 +71,7 @@ export default function ProductCard({
         )}
 
         {/* Overlay jika Stok Habis */}
-        {!product.inStock && (
+        {(!product.inStock || (product.stockQuantity !== undefined && product.stockQuantity <= 0)) && (
           <div className="absolute inset-0 bg-stone-900/40 backdrop-blur-[1px] flex items-center justify-center p-2 text-center">
             <span className="bg-red-600 text-white font-bold text-xs px-3 py-1.5 rounded-full shadow-md flex items-center gap-1">
               <AlertCircle className="w-3.5 h-3.5" /> Stok Habis
@@ -82,9 +83,16 @@ export default function ProductCard({
       {/* Product Info & Price Box */}
       <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
         <div>
-          <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-orange-600">
-            {product.category.name}
-          </span>
+          <div className="flex items-center justify-between gap-1">
+            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-orange-600">
+              {product.category.name}
+            </span>
+            {product.stockQuantity !== undefined && product.stockQuantity > 0 && product.stockQuantity <= 5 && (
+              <span className="text-[10px] font-black text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-md">
+                Sisa {product.stockQuantity} {product.unit}
+              </span>
+            )}
+          </div>
           <h3 className="font-bold text-stone-900 text-sm sm:text-base leading-snug line-clamp-2 mt-0.5 group-hover:text-orange-600 transition-colors">
             {product.name}
           </h3>
@@ -99,7 +107,7 @@ export default function ProductCard({
         <div className="mt-3 pt-2.5 sm:pt-3 border-t border-stone-100 flex items-center justify-between gap-1.5 sm:gap-2">
           <div className="min-w-0">
             <span className="text-[10px] sm:text-xs text-stone-400 font-medium block leading-none">
-              /{product.unit}
+              /{product.unit} {product.stockQuantity !== undefined && product.stockQuantity > 5 ? `• Stok ${product.stockQuantity}` : ''}
             </span>
             <span className="text-sm sm:text-lg font-black text-stone-900 truncate block">
               {formatRupiah(product.price)}
@@ -107,7 +115,7 @@ export default function ProductCard({
           </div>
 
           {/* Quantity Controls */}
-          {product.inStock ? (
+          {product.inStock && (product.stockQuantity === undefined || product.stockQuantity > 0) ? (
             quantityInCart > 0 ? (
               <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 rounded-xl p-0.5 sm:p-1 shrink-0">
                 <button

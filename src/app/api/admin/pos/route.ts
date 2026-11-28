@@ -19,8 +19,9 @@ export async function POST(request: Request) {
 
     for (const item of items) {
       let product = null;
+      const isManual = item.productId && item.productId.startsWith('manual-');
 
-      if (item.productId && item.productId.startsWith('manual-')) {
+      if (isManual) {
         // Produk Manual Cepat Kasir (F2)
         const manualName = (item.name || 'Barang Lain-lain').trim();
         const manualPrice = Number(item.price) || 0;
@@ -64,6 +65,18 @@ export async function POST(request: Request) {
           { success: false, message: `Produk tidak ditemukan` },
           { status: 400 }
         );
+      }
+
+      // Kurangi stok jika produk bukan barang manual sementara
+      if (!isManual) {
+        const nextStock = Math.max(0, product.stockQuantity - item.quantity);
+        await prisma.product.update({
+          where: { id: product.id },
+          data: {
+            stockQuantity: nextStock,
+            inStock: nextStock > 0,
+          },
+        });
       }
 
       const itemPrice = item.price !== undefined ? Number(item.price) : product.price;

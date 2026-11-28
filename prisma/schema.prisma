@@ -38,6 +38,7 @@ model Product {
   unit        String      @default("pcs") // misal: "kg", "pcs", "bungkus", "renceng", "btg"
   imageUrl    String?
   inStock     Boolean     @default(true)
+  stockQuantity Int       @default(10) // Kuantitas stok riil
   isFeatured  Boolean     @default(false)
   categoryId  String
   category    Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)

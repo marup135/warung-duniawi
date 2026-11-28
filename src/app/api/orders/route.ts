@@ -21,74 +21,87 @@ export async function POST(request: Request) {
       );
     }
 
-    // Hitung total belanja dari database
+    // Hitung total belanja dari database dan kurangi kuantitas stok riil
     let itemsTotal = 0;
-    const orderItemsData = [];
+    const orderItemsData: { productId: string; quantity: number; price: number; subtotal: number }[] = [];
 
-    for (const item of items) {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
-      });
+    const newOrder = await prisma.$transaction(async (tx) => {
+      for (const item of items) {
+        const product = await tx.product.findUnique({
+          where: { id: item.productId },
+        });
 
-      if (!product || !product.inStock) {
-        return NextResponse.json(
-          { success: false, message: `Produk ${product?.name || 'tersebut'} tidak tersedia` },
-          { status: 400 }
-        );
+        if (!product || !product.inStock || product.stockQuantity < item.quantity) {
+          throw new Error(
+            product
+              ? `Stok produk "${product.name}" tidak mencukupi (Tersisa: ${product.stockQuantity})`
+              : 'Produk tidak ditemukan'
+          );
+        }
+
+        const itemSubtotal = product.price * item.quantity;
+        itemsTotal += itemSubtotal;
+
+        // Kurangi kuantitas stok
+        const nextQty = product.stockQuantity - item.quantity;
+        await tx.product.update({
+          where: { id: product.id },
+          data: {
+            stockQuantity: nextQty,
+            inStock: nextQty > 0,
+          },
+        });
+
+        orderItemsData.push({
+          productId: product.id,
+          quantity: item.quantity,
+          price: product.price,
+          subtotal: itemSubtotal,
+        });
       }
 
-      const itemSubtotal = product.price * item.quantity;
-      itemsTotal += itemSubtotal;
+      // Hitung Ongkir: Belanja >= 100.000 Gratis, selain itu Rp 2.000 (jika diantar)
+      let shippingFee = 0;
+      if (isDelivery) {
+        shippingFee = itemsTotal >= 100000 ? 0 : 2000;
+      }
+      const totalAmount = itemsTotal + shippingFee;
 
-      orderItemsData.push({
-        productId: product.id,
-        quantity: item.quantity,
-        price: product.price,
-        subtotal: itemSubtotal,
-      });
-    }
+      // Generate kode unik order: WD-TANGGAL-RANDOM (cth: WD-261002-891)
+      const todayStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+      const randomSuffix = Math.floor(100 + Math.random() * 900);
+      const orderNumber = `WD-${todayStr}-${randomSuffix}`;
 
-    // Hitung Ongkir: Belanja >= 100.000 Gratis, selain itu Rp 2.000 (jika diantar)
-    let shippingFee = 0;
-    if (isDelivery) {
-      shippingFee = itemsTotal >= 100000 ? 0 : 2000;
-    }
-    const totalAmount = itemsTotal + shippingFee;
-
-    // Generate kode unik order: WD-TANGGAL-RANDOM (cth: WD-261002-891)
-    const todayStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
-    const randomSuffix = Math.floor(100 + Math.random() * 900);
-    const orderNumber = `WD-${todayStr}-${randomSuffix}`;
-
-    // Simpan order & order items ke database Prisma
-    const newOrder = await prisma.order.create({
-      data: {
-        orderNumber,
-        customerName: customerName.trim(),
-        customerPhone: customerPhone.trim(),
-        pickupMethod: isDelivery ? 'DELIVERY' : 'PICKUP',
-        deliveryAddress: isDelivery ? deliveryAddress.trim() : null,
-        paymentMethod: isDelivery ? 'COD_CASH_OR_QRIS' : 'CASH_OR_QRIS_ON_SITE',
-        status: 'PENDING',
-        totalAmount,
-        shippingFee,
-        notes: notes ? notes.trim() : null,
-        items: {
-          create: orderItemsData,
+      // Simpan order & order items ke database Prisma
+      return await tx.order.create({
+        data: {
+          orderNumber,
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
+          pickupMethod: isDelivery ? 'DELIVERY' : 'PICKUP',
+          deliveryAddress: isDelivery ? deliveryAddress.trim() : null,
+          paymentMethod: isDelivery ? 'COD_CASH_OR_QRIS' : 'CASH_OR_QRIS_ON_SITE',
+          status: 'PENDING',
+          totalAmount,
+          shippingFee,
+          notes: notes ? notes.trim() : null,
+          items: {
+            create: orderItemsData,
+          },
         },
-      },
-      include: {
-        items: {
-          include: {
-            product: {
-              select: {
-                name: true,
-                unit: true,
+        include: {
+          items: {
+            include: {
+              product: {
+                select: {
+                  name: true,
+                  unit: true,
+                },
               },
             },
           },
         },
-      },
+      });
     });
 
     return NextResponse.json({
@@ -96,11 +109,11 @@ export async function POST(request: Request) {
       message: 'Pesanan berhasil dibuat!',
       data: newOrder,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error submitting order:', error);
     return NextResponse.json(
-      { success: false, message: 'Gagal memproses pesanan' },
-      { status: 500 }
+      { success: false, message: error?.message || 'Gagal memproses pesanan' },
+      { status: 400 }
     );
   }
 }

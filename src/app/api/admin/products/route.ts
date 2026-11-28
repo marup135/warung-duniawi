@@ -5,7 +5,7 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, categoryId, price, unit, barcode, description, imageUrl, inStock, isFeatured } = body;
+    const { name, categoryId, price, unit, barcode, description, imageUrl, inStock, stockQuantity, isFeatured } = body;
 
     if (!name || !categoryId || price === undefined) {
       return NextResponse.json(
@@ -18,6 +18,9 @@ export async function POST(request: Request) {
     const slugBase = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
     const slug = `${slugBase}-${Math.floor(Math.random() * 1000)}`;
 
+    const qty = stockQuantity !== undefined ? Math.max(0, parseInt(stockQuantity, 10) || 0) : 10;
+    const computedInStock = inStock !== undefined ? Boolean(inStock) : qty > 0;
+
     const newProduct = await prisma.product.create({
       data: {
         name: name.trim(),
@@ -28,7 +31,8 @@ export async function POST(request: Request) {
         unit: unit ? unit.trim() : 'pcs',
         description: description ? description.trim() : null,
         imageUrl: imageUrl ? imageUrl.trim() : null,
-        inStock: inStock !== undefined ? Boolean(inStock) : true,
+        stockQuantity: qty,
+        inStock: computedInStock && qty > 0,
         isFeatured: isFeatured !== undefined ? Boolean(isFeatured) : false,
       },
     });
@@ -51,7 +55,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { productId, name, categoryId, price, unit, barcode, description, imageUrl, inStock, isFeatured } = body;
+    const { productId, name, categoryId, price, unit, barcode, description, imageUrl, inStock, stockQuantity, isFeatured } = body;
 
     if (!productId) {
       return NextResponse.json(
@@ -68,7 +72,24 @@ export async function PUT(request: Request) {
     if (barcode !== undefined) dataToUpdate.barcode = barcode ? barcode.trim() : null;
     if (description !== undefined) dataToUpdate.description = description ? description.trim() : null;
     if (imageUrl !== undefined) dataToUpdate.imageUrl = imageUrl ? imageUrl.trim() : null;
-    if (inStock !== undefined) dataToUpdate.inStock = Boolean(inStock);
+    if (stockQuantity !== undefined) {
+      const parsedQty = Math.max(0, parseInt(stockQuantity, 10) || 0);
+      dataToUpdate.stockQuantity = parsedQty;
+      // Otomatis sinkronkan status inStock jika stockQuantity diubah
+      if (inStock === undefined) {
+        dataToUpdate.inStock = parsedQty > 0;
+      }
+    }
+    if (inStock !== undefined) {
+      dataToUpdate.inStock = Boolean(inStock);
+      // Jika diset Tersedia tapi stok 0, beri default 10 agar bisa dibeli
+      if (Boolean(inStock) && stockQuantity === undefined) {
+        const existing = await prisma.product.findUnique({ where: { id: productId }, select: { stockQuantity: true } });
+        if (existing && existing.stockQuantity <= 0) {
+          dataToUpdate.stockQuantity = 10;
+        }
+      }
+    }
     if (isFeatured !== undefined) dataToUpdate.isFeatured = Boolean(isFeatured);
 
     const updatedProduct = await prisma.product.update({

@@ -96,6 +96,7 @@ interface Product {
   description?: string | null;
   imageUrl?: string | null;
   inStock: boolean;
+  stockQuantity: number;
   isFeatured?: boolean;
   categoryId: string;
   category: {
@@ -327,12 +328,17 @@ export default function AdminDashboard() {
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [newPriceValue, setNewPriceValue] = useState<number>(0);
 
+  // Quick Stock Edit State
+  const [editingStockId, setEditingStockId] = useState<string | null>(null);
+  const [newStockValue, setNewStockValue] = useState<number>(0);
+
   // Modal Product Baru & Edit
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [newProdName, setNewProdName] = useState('');
   const [newProdCategoryId, setNewProdCategoryId] = useState('');
   const [newProdPrice, setNewProdPrice] = useState('');
+  const [newProdStock, setNewProdStock] = useState('10');
   const [newProdUnit, setNewProdUnit] = useState('pcs');
   const [newProdBarcode, setNewProdBarcode] = useState('');
   const [newProdDesc, setNewProdDesc] = useState('');
@@ -386,25 +392,35 @@ export default function AdminDashboard() {
   const [isCameraScannerOpen, setIsCameraScannerOpen] = useState(false);
   const [scannerTarget, setScannerTarget] = useState<'pos' | 'product_form'>('pos');
 
-  // Quick Add Product State (F2 Shortcut)
+  // Quick Add Product State (F2 Shortcut & Auto Unregistered Barcode Scan)
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [quickAddPrice, setQuickAddPrice] = useState('');
   const [quickAddName, setQuickAddName] = useState('');
+  const [quickAddBarcode, setQuickAddBarcode] = useState('');
+  const [isQuickAddSaving, setIsQuickAddSaving] = useState(false);
   const quickPriceInputRef = useRef<HTMLInputElement>(null);
   const cashInputRef = useRef<HTMLInputElement>(null);
 
-  // Buka Modal Tambah Produk Cepat (F2)
-  const handleOpenQuickAdd = () => {
+  // Buka Modal Tambah Produk Cepat (F2 atau Hasil Scan Barcode Baru)
+  const handleOpenQuickAdd = (barcodeCode?: string) => {
     setIsQuickAddOpen(true);
     setQuickAddPrice('');
-    setQuickAddName('');
+    if (barcodeCode) {
+      setQuickAddBarcode(barcodeCode);
+      setQuickAddName(`Barang Baru (${barcodeCode})`);
+      playPromptSound();
+    } else {
+      setQuickAddBarcode('');
+      setQuickAddName('');
+    }
     setTimeout(() => {
       quickPriceInputRef.current?.focus();
-    }, 50);
+      quickPriceInputRef.current?.select();
+    }, 60);
   };
 
-  // Submit Tambah Produk Cepat (F2) langsung masuk keranjang kasir
-  const handleQuickAddSubmit = (e: React.FormEvent) => {
+  // Submit Tambah Produk Cepat: Simpan ke DB & langsung masuk keranjang POS
+  const handleQuickAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const priceNum = Number(quickAddPrice);
     if (!priceNum || priceNum <= 0) {
@@ -412,25 +428,87 @@ export default function AdminDashboard() {
       return;
     }
 
-    const itemName = quickAddName.trim() || 'Barang Lain-lain';
-    const manualProduct: Product = {
-      id: `manual-${Date.now()}`,
-      name: itemName,
-      price: priceNum,
-      unit: 'item',
-      categoryId: categories[0]?.id || 'lain-lain',
-      inStock: true,
-      category: {
-        id: categories[0]?.id || 'lain-lain',
-        name: categories[0]?.name || 'Lain-lain',
-      },
-    };
+    const defaultCatId = categories[0]?.id || '';
+    const itemName = quickAddName.trim() || (quickAddBarcode ? `Barang Baru (${quickAddBarcode})` : 'Barang Lain-lain');
 
-    handleAddPosCart(manualProduct);
+    // Jika memiliki barcode, simpan permanen ke database produk agar tersimpan ke katalog
+    if (quickAddBarcode) {
+      setIsQuickAddSaving(true);
+      try {
+        const res = await fetch('/api/admin/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: itemName,
+            barcode: quickAddBarcode,
+            price: priceNum,
+            unit: 'pcs',
+            categoryId: defaultCatId,
+            stockQuantity: 10,
+            inStock: true,
+          }),
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          const savedProduct: Product = json.data;
+          // Perbarui daftar produk di memori kasir agar scan selanjutnya langsung kenal
+          setProducts((prev) => [savedProduct, ...prev.filter((p) => p.id !== savedProduct.id)]);
+          // Masukkan ke keranjang kasir
+          handleAddPosCart(savedProduct);
+          fetchProducts(); // Refresh latar belakang
+        } else {
+          // Fallback lokal jika database gagal atau barcode sudah ada
+          const manualProduct: Product = {
+            id: `manual-${Date.now()}`,
+            name: itemName,
+            barcode: quickAddBarcode,
+            price: priceNum,
+            unit: 'pcs',
+            categoryId: defaultCatId || 'lain-lain',
+            inStock: true,
+            stockQuantity: 10,
+            category: categories[0] || { id: 'lain-lain', name: 'Lain-lain' },
+          };
+          handleAddPosCart(manualProduct);
+        }
+      } catch (err) {
+        // Fallback jika offline/error jaringan
+        const manualProduct: Product = {
+          id: `manual-${Date.now()}`,
+          name: itemName,
+          barcode: quickAddBarcode,
+          price: priceNum,
+          unit: 'pcs',
+          categoryId: defaultCatId || 'lain-lain',
+          inStock: true,
+          stockQuantity: 10,
+          category: categories[0] || { id: 'lain-lain', name: 'Lain-lain' },
+        };
+        handleAddPosCart(manualProduct);
+      } finally {
+        setIsQuickAddSaving(false);
+      }
+    } else {
+      // Tanpa barcode (Item manual F2 biasa)
+      const manualProduct: Product = {
+        id: `manual-${Date.now()}`,
+        name: itemName,
+        price: priceNum,
+        unit: 'item',
+        categoryId: defaultCatId || 'lain-lain',
+        inStock: true,
+        stockQuantity: 999,
+        category: categories[0] || { id: 'lain-lain', name: 'Lain-lain' },
+      };
+      handleAddPosCart(manualProduct);
+    }
+
     setIsQuickAddOpen(false);
     setQuickAddPrice('');
     setQuickAddName('');
+    setQuickAddBarcode('');
     scanBufferRef.current = '';
+    setCashGivenInput('');
   };
 
 
@@ -530,6 +608,35 @@ export default function AdminDashboard() {
       osc.stop(audioCtx.currentTime + 0.12);
     } catch (e) {
       console.log('Audio beep error:', e);
+    }
+  };
+
+  // Suara Nada Notifikasi Pop-up Barang Baru (Dual Tone Cepat)
+  const playPromptSound = (volOverride?: number) => {
+    try {
+      const vol = typeof volOverride === 'number' ? volOverride : speakerVolumeRef.current;
+      if (vol <= 0) return;
+
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      const baseGain = 0.25;
+      const targetGain = baseGain * (vol / 100);
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+      osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.08); // E5
+      gain.gain.setValueAtTime(targetGain, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.25);
+    } catch (e) {
+      console.log('Audio prompt error:', e);
     }
   };
 
@@ -794,7 +901,9 @@ export default function AdminDashboard() {
       handleAddPosCart(matchedProduct);
       playScanBeep();
     } else {
-      alert(`Produk dengan Barcode "${rawInput}" belum terdaftar di katalog!`);
+      // Barcode belum terdaftar di katalog -> Buka Pop-up Quick-Add otomatis
+      setIsCameraScannerOpen(false);
+      handleOpenQuickAdd(rawInput);
     }
   };
 
@@ -802,6 +911,36 @@ export default function AdminDashboard() {
   const scanBufferRef = useRef('');
   const barcodeScanBufferRef = useRef('');
   const lastKeyTimeRef = useRef(0);
+
+  // GLOBAL SHORTCUT HOME / F1 / ESCAPE KE KASIR POS DARI TAB MANAPUN
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const handleGlobalShortcuts = (e: KeyboardEvent) => {
+      // Tombol Home atau F1: Langsung kembali ke Home Kasir POS
+      if (e.key === 'Home' || e.key === 'F1') {
+        const activeEl = document.activeElement;
+        const isEditingText =
+          (activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA') &&
+          activeEl?.id !== 'pos-cash-input';
+
+        // Jika tidak sedang mengedit form teks penting, langsung kembalikan ke kasir POS
+        if (!isEditingText) {
+          e.preventDefault();
+          setIsQuickAddOpen(false);
+          setIsManualSearchOpen(false);
+          setIsAddProductOpen(false);
+          setIsImportModalOpen(false);
+          setIsCameraScannerOpen(false);
+          setActiveTab('pos');
+          playScanBeep();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalShortcuts);
+    return () => window.removeEventListener('keydown', handleGlobalShortcuts);
+  }, [isAuthenticated]);
 
   // GLOBAL KEYBOARD SHORTCUT UNTUK KASIR ZERO-MOUSE & AUTO-SCANNER
   useEffect(() => {
@@ -968,10 +1107,11 @@ export default function AdminDashboard() {
         }
 
         // Cek 2: Jika panjang string >= 7 (Barcode EAN-8/13 yang tidak terdaftar di DB)
+        // Otomatis buka pop-up Quick-Add agar kasir cukup masukkan harga
         if (cleanDigits.length >= 7) {
-          alert(`Produk dengan Barcode "${rawInput}" tidak ditemukan!`);
           scanBufferRef.current = '';
           setCashGivenInput('');
+          handleOpenQuickAdd(rawInput);
           return;
         }
 
@@ -1048,12 +1188,32 @@ export default function AdminDashboard() {
     }
   };
 
+  // Quick Edit Stok Produk
+  const handleSaveStock = async (productId: string) => {
+    try {
+      const qty = Math.max(0, Number(newStockValue) || 0);
+      const res = await fetch('/api/admin/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId, stockQuantity: qty, inStock: qty > 0 }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setEditingStockId(null);
+        fetchProducts();
+      }
+    } catch (err) {
+      alert('Gagal menyimpan stok');
+    }
+  };
+
   // Open Edit Modal untuk Produk
   const handleOpenEditProduct = (prod: Product) => {
     setEditingProduct(prod);
     setNewProdName(prod.name);
     setNewProdCategoryId(prod.categoryId);
     setNewProdPrice(String(prod.price));
+    setNewProdStock(String(prod.stockQuantity ?? 10));
     setNewProdUnit(prod.unit);
     setNewProdBarcode(prod.barcode || '');
     setNewProdDesc(prod.description || '');
@@ -1067,6 +1227,7 @@ export default function AdminDashboard() {
     setNewProdName('');
     setNewProdCategoryId(categories[0]?.id || '');
     setNewProdPrice('');
+    setNewProdStock('10');
     setNewProdUnit('pcs');
     setNewProdBarcode('');
     setNewProdDesc('');
@@ -1080,10 +1241,13 @@ export default function AdminDashboard() {
     try {
       const isEdit = !!editingProduct;
       const method = isEdit ? 'PUT' : 'POST';
+      const qtyNum = Math.max(0, parseInt(newProdStock, 10) || 0);
       const payload: any = {
         name: newProdName,
         categoryId: newProdCategoryId,
         price: Number(newProdPrice),
+        stockQuantity: qtyNum,
+        inStock: qtyNum > 0,
         unit: newProdUnit,
         barcode: newProdBarcode,
         description: newProdDesc,
@@ -1613,6 +1777,9 @@ export default function AdminDashboard() {
               }`}
             >
               <Calculator className="w-5 h-5 text-orange-600" /> KASIR TOKO (POS)
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-stone-100 text-stone-600 border border-stone-200">
+                Home / F1
+              </span>
             </button>
 
             <button
@@ -1675,34 +1842,6 @@ export default function AdminDashboard() {
               <Settings className="w-4 h-4 text-stone-600" /> Pengaturan & Kios
             </button>
           </div>
-
-          {activeTab === 'orders' && (
-            <div className="flex items-center gap-2 mb-2">
-              <button
-                onClick={() => handleClearOnlineOrders('completed_online')}
-                className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                title="Hapus semua pesanan online yang sudah Selesai atau Batal"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-red-600" /> Bersihkan Riwayat Selesai
-              </button>
-              <button
-                onClick={fetchOrders}
-                className="px-3 py-1.5 bg-white border border-stone-200 text-stone-700 rounded-xl text-xs font-bold hover:bg-stone-50 flex items-center gap-1 cursor-pointer shadow-2xs"
-              >
-                <RefreshCw className="w-3.5 h-3.5" /> Refresh
-              </button>
-            </div>
-          )}
-          {activeTab === 'barcodes' && (
-            <div className="flex items-center gap-2 mb-2">
-              <button
-                onClick={() => handleOpenAddBarcodeModal()}
-                className="px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-black flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
-              >
-                <Plus className="w-3.5 h-3.5" /> + Tambah Barcode Baru
-              </button>
-            </div>
-          )}
         </div>
 
         {/* ========================================================================= */}
@@ -1733,7 +1872,7 @@ export default function AdminDashboard() {
                     </button>
                     <button
                       type="button"
-                      onClick={handleOpenQuickAdd}
+                      onClick={() => handleOpenQuickAdd()}
                       className="text-xs text-white font-black bg-orange-600 hover:bg-orange-700 px-3 py-1.5 rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 active:scale-95"
                     >
                       <Plus className="w-4 h-4" /> + Barang Manual (F2)
@@ -1934,22 +2073,22 @@ export default function AdminDashboard() {
         )}
 
         {/* ========================================================================= */}
-        {/* MODAL INPUT BARANG CEPAT (F2) - KHUSUS BARANG TANPA BARCODE / NON-KATALOG */}
+        {/* MODAL INPUT BARANG CEPAT (F2 / AUTO SCAN BARCODE BARU) */}
         {/* ========================================================================= */}
         {isQuickAddOpen && (
           <div className="fixed inset-0 z-50 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
             <div className="bg-white w-full max-w-md rounded-3xl p-6 border-2 border-orange-500 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-100">
               <div className="flex items-center justify-between border-b border-stone-200 pb-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-2xl bg-orange-100 text-orange-600 font-black flex items-center justify-center text-lg">
-                    F2
+                  <div className={`w-10 h-10 rounded-2xl font-black flex items-center justify-center text-lg ${quickAddBarcode ? 'bg-amber-100 text-amber-700' : 'bg-orange-100 text-orange-600'}`}>
+                    {quickAddBarcode ? '⚡' : 'F2'}
                   </div>
                   <div>
                     <h3 className="font-black text-stone-900 text-base leading-tight">
-                      Tambah Barang Cepat
+                      {quickAddBarcode ? 'Barang Belum Ada di Kasir!' : 'Tambah Barang Cepat'}
                     </h3>
                     <p className="text-xs text-stone-500">
-                      Cukup masukkan harga, nama opsional
+                      {quickAddBarcode ? 'Cukup masukkan harga lalu tekan Enter' : 'Cukup masukkan harga, nama opsional'}
                     </p>
                   </div>
                 </div>
@@ -1962,12 +2101,23 @@ export default function AdminDashboard() {
                 </button>
               </div>
 
+              {quickAddBarcode && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between text-xs font-bold text-amber-900">
+                  <span className="flex items-center gap-1.5">
+                    <Barcode className="w-4 h-4 text-amber-700" /> Barcode:
+                  </span>
+                  <span className="font-mono bg-white px-2 py-0.5 rounded-lg border border-amber-300 text-amber-800">
+                    {quickAddBarcode}
+                  </span>
+                </div>
+              )}
+
               <form onSubmit={handleQuickAddSubmit} className="space-y-4">
                 {/* 1. INPUT HARGA UTAMA (OTOMATIS FOKUS DI SINI) */}
                 <div>
                   <label className="block text-xs font-black text-stone-800 mb-1 flex items-center justify-between">
-                    <span>HARGA BARANG (Rp) *</span>
-                    <span className="text-[11px] text-orange-600 font-extrabold">(Wajib Diisi)</span>
+                    <span>HARGA JUAL (Rp) *</span>
+                    <span className="text-[11px] text-orange-600 font-extrabold">(Wajib Diisi - Cukup Ketik Angka)</span>
                   </label>
                   <div className="relative">
                     <span className="absolute left-4 top-3.5 font-black text-stone-400 text-lg">Rp</span>
@@ -1976,10 +2126,11 @@ export default function AdminDashboard() {
                       type="number"
                       required
                       autoFocus
+                      disabled={isQuickAddSaving}
                       value={quickAddPrice}
                       onChange={(e) => setQuickAddPrice(e.target.value)}
                       placeholder="0"
-                      className="w-full pl-12 pr-4 py-3 bg-orange-50/50 border-2 border-orange-400 rounded-2xl font-black text-stone-900 text-2xl focus:ring-4 focus:ring-orange-500/20 focus:bg-white focus:outline-none"
+                      className="w-full pl-12 pr-4 py-3 bg-orange-50/50 border-2 border-orange-400 rounded-2xl font-black text-stone-900 text-2xl focus:ring-4 focus:ring-orange-500/20 focus:bg-white focus:outline-none disabled:opacity-50"
                     />
                   </div>
                 </div>
@@ -1987,32 +2138,48 @@ export default function AdminDashboard() {
                 {/* 2. INPUT NAMA BARANG (OPSIONAL) */}
                 <div>
                   <label className="block text-xs font-bold text-stone-700 mb-1 flex items-center justify-between">
-                    <span>NAMA BARANG (OPSIONAL):</span>
-                    <span className="text-[11px] text-stone-400 font-normal">Boleh Dikosongkan</span>
+                    <span>NAMA BARANG:</span>
+                    <span className="text-[11px] text-stone-400 font-normal">Bisa Diedit Nanti</span>
                   </label>
                   <input
                     type="text"
+                    disabled={isQuickAddSaving}
                     value={quickAddName}
                     onChange={(e) => setQuickAddName(e.target.value)}
-                    placeholder="Contoh: Es Batu, Kerupuk, Rokok Eceran (Default: Barang Lain-lain)"
-                    className="w-full px-4 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 text-sm font-semibold focus:ring-2 focus:ring-orange-500 focus:bg-white"
+                    placeholder={quickAddBarcode ? `Barang Baru (${quickAddBarcode})` : 'Contoh: Es Batu, Kerupuk, Rokok Eceran'}
+                    className="w-full px-4 py-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 text-sm font-semibold focus:ring-2 focus:ring-orange-500 focus:bg-white disabled:opacity-50"
                   />
+                  {quickAddBarcode && (
+                    <p className="text-[11px] text-stone-400 mt-1">
+                      💡 <em>Bapak tidak perlu ganti nama sekarang jika repot. Cukup ketik harga lalu tekan Enter.</em>
+                    </p>
+                  )}
                 </div>
 
                 {/* TOMBOL AKSI CEPAT */}
                 <div className="flex gap-2 pt-2">
                   <button
                     type="button"
+                    disabled={isQuickAddSaving}
                     onClick={() => setIsQuickAddOpen(false)}
-                    className="w-1/3 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-sm rounded-xl cursor-pointer"
+                    className="w-1/3 py-3 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold text-sm rounded-xl cursor-pointer disabled:opacity-50"
                   >
                     Batal (Esc)
                   </button>
                   <button
                     type="submit"
-                    className="w-2/3 py-3 bg-orange-600 hover:bg-orange-700 text-white font-black text-sm rounded-xl shadow-md shadow-orange-600/20 cursor-pointer active:scale-98 flex items-center justify-center gap-1.5"
+                    disabled={isQuickAddSaving}
+                    className="w-2/3 py-3 bg-orange-600 hover:bg-orange-700 text-white font-black text-sm rounded-xl shadow-md shadow-orange-600/20 cursor-pointer active:scale-98 flex items-center justify-center gap-1.5 disabled:opacity-50"
                   >
-                    <Plus className="w-5 h-5" /> Masukkan ke Kasir [Enter]
+                    {isQuickAddSaving ? (
+                      <span className="flex items-center gap-1.5">
+                        <RefreshCw className="w-4 h-4 animate-spin" /> Menyimpan...
+                      </span>
+                    ) : (
+                      <>
+                        <Plus className="w-5 h-5" /> Simpan & Masuk Kasir [Enter]
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -2070,13 +2237,24 @@ export default function AdminDashboard() {
                       handleAddPosCart(product);
                       setIsManualSearchOpen(false);
                     }}
-                    disabled={!product.inStock}
-                    className="bg-stone-50 border border-stone-200 p-3 rounded-2xl text-left shadow-2xs hover:border-orange-500 hover:bg-orange-50/20 transition-all cursor-pointer flex flex-col justify-between h-28"
+                    disabled={!product.inStock || (product.stockQuantity !== undefined && product.stockQuantity <= 0)}
+                    className="bg-stone-50 border border-stone-200 p-3 rounded-2xl text-left shadow-2xs hover:border-orange-500 hover:bg-orange-50/20 transition-all cursor-pointer flex flex-col justify-between h-28 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <div>
-                      <span className="text-[10px] font-bold text-orange-600 uppercase block">
-                        {product.category.name}
-                      </span>
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] font-bold text-orange-600 uppercase block">
+                          {product.category.name}
+                        </span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                          (product.stockQuantity ?? 0) <= 0 || !product.inStock
+                            ? 'bg-red-100 text-red-700'
+                            : (product.stockQuantity ?? 0) <= 5
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}>
+                          {product.stockQuantity ?? 0} {product.unit}
+                        </span>
+                      </div>
                       <h4 className="font-extrabold text-stone-900 text-xs line-clamp-2 mt-0.5">
                         {product.name}
                       </h4>
@@ -2268,6 +2446,31 @@ export default function AdminDashboard() {
                 </p>
               </div>
             )}
+
+            {/* Action Bar Bawah: Bersihkan Riwayat Selesai & Refresh Data */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-stone-200/80">
+              <span className="text-xs text-stone-500 font-medium">
+                {orders.length > 0 ? `Total ${orders.length} pesanan terdata.` : 'Riwayat pesanan kosong.'}
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={fetchOrders}
+                  className="px-3.5 py-2 bg-white border border-stone-300 text-stone-700 hover:bg-stone-50 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-all active:scale-95"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Refresh Pesanan
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleClearOnlineOrders('completed_online')}
+                  className="px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-all active:scale-95"
+                  title="Hapus semua pesanan online yang sudah Selesai atau Batal"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-red-600" /> Bersihkan Riwayat Selesai
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -2385,8 +2588,8 @@ export default function AdminDashboard() {
 
             {/* List Table Products */}
             <div className="bg-white rounded-3xl border border-stone-200 shadow-xs overflow-hidden">
-              <div className="p-4 bg-stone-50 border-b border-stone-200 font-extrabold text-xs text-stone-500 uppercase tracking-wider grid grid-cols-12 gap-2 items-center">
-                <div className="col-span-6 sm:col-span-5 flex items-center gap-3">
+              <div className="p-4 bg-stone-50 border-b border-stone-200 font-extrabold text-xs text-stone-500 uppercase tracking-wider grid grid-cols-12 gap-3 items-center">
+                <div className="col-span-5 sm:col-span-4 flex items-center gap-3">
                   <input
                     type="checkbox"
                     checked={
@@ -2409,8 +2612,9 @@ export default function AdminDashboard() {
                   />
                   <span>Nama Produk</span>
                 </div>
-                <div className="col-span-3 sm:col-span-3">Harga</div>
-                <div className="col-span-3 sm:col-span-4 text-right">Stok & Aksi Superadmin</div>
+                <div className="col-span-3 sm:col-span-3">Harga Satuan</div>
+                <div className="col-span-4 sm:col-span-3 text-left">Kuantitas Stok</div>
+                <div className="hidden sm:block sm:col-span-2 text-right">Aksi</div>
               </div>
 
               <div className="divide-y divide-stone-100">
@@ -2418,11 +2622,12 @@ export default function AdminDashboard() {
                   filteredAdminProducts.map((prod) => (
                     <div
                       key={prod.id}
-                      className={`p-4 grid grid-cols-12 gap-2 items-center hover:bg-stone-50/80 transition-colors text-xs sm:text-sm ${
+                      className={`p-4 grid grid-cols-12 gap-3 items-center hover:bg-stone-50/80 transition-colors text-xs sm:text-sm ${
                         selectedProductIds.includes(prod.id) ? 'bg-orange-50/40' : ''
                       }`}
                     >
-                      <div className="col-span-6 sm:col-span-5 flex items-center gap-3">
+                      {/* Kolom 1: Foto, Nama, Kategori, Barcode */}
+                      <div className="col-span-5 sm:col-span-4 flex items-center gap-3">
                         <input
                           type="checkbox"
                           checked={selectedProductIds.includes(prod.id)}
@@ -2461,6 +2666,7 @@ export default function AdminDashboard() {
                         </div>
                       </div>
 
+                      {/* Kolom 2: Harga Satuan */}
                       <div className="col-span-3 sm:col-span-3">
                         {editingPriceId === prod.id ? (
                           <div className="flex items-center gap-1">
@@ -2496,29 +2702,67 @@ export default function AdminDashboard() {
                         )}
                       </div>
 
-                      <div className="col-span-4 sm:col-span-5 text-right flex items-center justify-end gap-2">
-                        {/* Toggle Stok */}
+                      {/* Kolom 3: Kuantitas Stok & Toggle Ketersediaan */}
+                      <div className="col-span-4 sm:col-span-3 flex items-center gap-2">
+                        {editingStockId === prod.id ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="number"
+                              min="0"
+                              value={newStockValue}
+                              onChange={(e) => setNewStockValue(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                              className="w-16 px-1.5 py-1 bg-stone-100 border border-orange-400 rounded text-xs font-bold text-center"
+                            />
+                            <button
+                              onClick={() => handleSaveStock(prod.id)}
+                              className="px-2 py-1 bg-emerald-600 text-white rounded text-[10px] font-bold cursor-pointer"
+                            >
+                              OK
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setEditingStockId(prod.id);
+                              setNewStockValue(prod.stockQuantity ?? (prod.inStock ? 10 : 0));
+                            }}
+                            className={`px-2.5 py-1 rounded-xl text-xs font-bold border flex items-center gap-1.5 cursor-pointer transition-all ${
+                              (prod.stockQuantity ?? 0) <= 0 || !prod.inStock
+                                ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100'
+                                : (prod.stockQuantity ?? 0) <= 5
+                                ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                                : 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                            }`}
+                            title="Klik untuk ubah jumlah stok"
+                          >
+                            <span>
+                              {(prod.stockQuantity ?? 0) <= 0 || !prod.inStock
+                                ? 'Habis (0)'
+                                : `Stok: ${prod.stockQuantity}`}
+                            </span>
+                            <Edit3 className="w-3 h-3 opacity-60" />
+                          </button>
+                        )}
+
                         <button
                           onClick={() => handleToggleStock(prod.id, prod.inStock)}
-                          className={`px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 cursor-pointer transition-all ${
-                            prod.inStock
+                          className={`p-1.5 rounded-xl font-bold text-xs flex items-center gap-1 cursor-pointer transition-all ${
+                            prod.inStock && (prod.stockQuantity ?? 0) > 0
                               ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                               : 'bg-red-100 text-red-800 border border-red-300'
                           }`}
-                          title="Ubah Status Stok"
+                          title="Ubah Status Ketersediaan (Ada / Habis)"
                         >
-                          {prod.inStock ? (
-                            <>
-                              <ToggleRight className="w-4 h-4 text-emerald-600" /> <span className="hidden sm:inline">Ada</span>
-                            </>
+                          {prod.inStock && (prod.stockQuantity ?? 0) > 0 ? (
+                            <ToggleRight className="w-4 h-4 text-emerald-600" />
                           ) : (
-                            <>
-                              <ToggleLeft className="w-4 h-4 text-red-600" /> <span className="hidden sm:inline">Habis</span>
-                            </>
+                            <ToggleLeft className="w-4 h-4 text-red-600" />
                           )}
                         </button>
+                      </div>
 
-                        {/* Full Edit Button */}
+                      {/* Kolom 4: Tombol Aksi (Full Edit & Hapus - Mentok Kanan Presisi) */}
+                      <div className="col-span-12 sm:col-span-2 text-right flex items-center justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-100">
                         <button
                           onClick={() => handleOpenEditProduct(prod)}
                           className="p-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl cursor-pointer border border-stone-200"
@@ -2527,7 +2771,6 @@ export default function AdminDashboard() {
                           <Edit3 className="w-4 h-4" />
                         </button>
 
-                        {/* Delete Button */}
                         <button
                           onClick={() => handleDeleteProduct(prod.id, prod.name)}
                           className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl cursor-pointer border border-red-200"
@@ -3349,7 +3592,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="block font-bold text-stone-700 mb-1">
                     Harga (Rp) *
@@ -3365,13 +3608,27 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block font-bold text-stone-700 mb-1">
+                    Stok Tersedia *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={newProdStock}
+                    onChange={(e) => setNewProdStock(e.target.value)}
+                    placeholder="10"
+                    className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-stone-700 mb-1">
                     Unit Satuan
                   </label>
                   <input
                     type="text"
                     value={newProdUnit}
                     onChange={(e) => setNewProdUnit(e.target.value)}
-                    placeholder="pcs / kg / bungkus / sak"
+                    placeholder="pcs / kg / bungkus"
                     className="w-full p-2.5 bg-stone-50 border border-stone-300 rounded-xl text-stone-900"
                   />
                 </div>

@@ -74,7 +74,8 @@ export async function POST(req: Request) {
     const barcodeIdx = headerCols.findIndex((h) => h.includes('barcode') || h.includes('kode'));
     const categoryIdx = headerCols.findIndex((h) => h.includes('kategori') || h.includes('category'));
     const unitIdx = headerCols.findIndex((h) => h.includes('satuan') || h.includes('unit'));
-    const stockIdx = headerCols.findIndex((h) => h.includes('stok') || h.includes('status'));
+    const qtyIdx = headerCols.findIndex((h) => h.includes('jumlah') || h.includes('qty') || h.includes('kuantitas'));
+    const stockIdx = headerCols.findIndex((h) => (h.includes('stok') || h.includes('status')) && !h.includes('jumlah') && !h.includes('qty'));
     const descIdx = headerCols.findIndex((h) => h.includes('deskripsi') || h.includes('desc'));
     const imgIdx = headerCols.findIndex((h) => h.includes('gambar') || h.includes('image') || h.includes('foto'));
 
@@ -141,10 +142,17 @@ export async function POST(req: Request) {
       const desc = descIdx !== -1 && cols[descIdx]?.trim() && cols[descIdx] !== '-' ? cols[descIdx].trim() : null;
       const imageUrl = imgIdx !== -1 && cols[imgIdx]?.trim() && cols[imgIdx] !== '-' ? cols[imgIdx].trim() : null;
 
+      const rawStockQty = qtyIdx !== -1 ? cols[qtyIdx]?.replace(/[^\d]/g, '') : '';
+      let stockQuantity = rawStockQty !== '' && !isNaN(parseInt(rawStockQty, 10)) ? parseInt(rawStockQty, 10) : 10;
+
       const inStock =
         stockIdx !== -1
           ? !cols[stockIdx]?.toLowerCase().includes('habis') && !cols[stockIdx]?.toLowerCase().includes('false')
-          : true;
+          : stockQuantity > 0;
+
+      if (!inStock && stockQuantity > 0 && stockIdx !== -1) {
+        stockQuantity = 0;
+      }
 
       // Cari atau buat kategori
       const rawCatName = categoryIdx !== -1 ? cols[categoryIdx]?.trim() : '';
@@ -196,7 +204,8 @@ export async function POST(req: Request) {
             unit,
             barcode: barcode || existingProd.barcode,
             categoryId: targetCategoryId,
-            inStock,
+            stockQuantity,
+            inStock: inStock && stockQuantity > 0,
             ...(desc ? { description: desc } : {}),
             ...(imageUrl ? { imageUrl } : {}),
           },
@@ -212,7 +221,8 @@ export async function POST(req: Request) {
             unit,
             barcode,
             categoryId: targetCategoryId,
-            inStock,
+            stockQuantity,
+            inStock: inStock && stockQuantity > 0,
             description: desc,
             imageUrl,
           },
